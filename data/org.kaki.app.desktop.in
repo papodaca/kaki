@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Kaki
+Exec=kaki
+Icon=org.kaki.app
+Terminal=false
+Type=Application
+Categories=Utility;
+Keywords=GTK;
+StartupNotify=true
+DBusActivatable=true

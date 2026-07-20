@@ -1,0 +1,8 @@
+# List of source files containing translatable strings.
+# Please keep this file sorted alphabetically.
+data/org.kaki.app.desktop.in
+data/org.kaki.app.metainfo.xml.in
+data/org.kaki.app.gschema.xml
+src/main.vala
+src/window.vala
+src/window.ui

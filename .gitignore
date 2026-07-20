@@ -1,0 +1,19 @@
+# Build directory
+/build/
+
+# Meson/Ninja artifacts
+*.ninja
+*.ninja.log
+compile_commands.json
+
+# Compiled objects / libraries
+*.o
+*.a
+*.so
+*.gresource
+
+# Editor / VCS
+*~
+.*.swp
+.vscode/
+.idea/
