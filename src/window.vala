@@ -127,6 +127,10 @@ public class Kaki.Window : Adw.ApplicationWindow {
         clear_action.activate.connect (on_clear);
         add_action (clear_action);
 
+        var test_keystroke_action = new GLib.SimpleAction ("test-keystroke", null);
+        test_keystroke_action.activate.connect (on_test_keystroke);
+        add_action (test_keystroke_action);
+
         // Recorder signals.
         recorder.chunk_ready.connect (on_chunk);
         recorder.recording_started.connect (on_recording_started);
@@ -404,6 +408,29 @@ public class Kaki.Window : Adw.ApplicationWindow {
                 start_timeout_id = 0;
             }
         }
+    }
+
+    // Test button: types the current transcript buffer into whatever
+    // window had focus before Kaki minimized. Bypasses the
+    // recording/transcription pipeline so the keystroke backend can
+    // be exercised in isolation.
+    private void on_test_keystroke () {
+        if (keystroke.backend == Kaki.Keystroke.Backend.NONE) {
+            toast_overlay.add_toast (new Adw.Toast (
+                _("No keystroke backend available")));
+            return;
+        }
+        string text = transcript_view.buffer.text;
+        if (text.length == 0) {
+            toast_overlay.add_toast (new Adw.Toast (
+                _("Buffer is empty — type something to test with first")));
+            return;
+        }
+        this.minimize ();
+        GLib.Timeout.add (250, () => {
+            keystroke.type_text.begin (text);
+            return false;
+        });
     }
 
     /* ----------------------------------------------------------------- */
