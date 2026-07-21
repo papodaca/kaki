@@ -69,6 +69,27 @@ cmake_args = [
 transcribe_compile_defs = ['-DTRANSCRIBE_STATIC']
 extra_archives = []           # backend-specific ggml archive, appended to link_args
 path_prefix = ''              # HIP prepends /opt/rocm/bin here; empty for others
+transcribe_link_libs = []     # backend-specific + math/cblas/stdc++ libs
+
+# Math, C++ stdlib, and BLAS libs needed at the final link step. Found
+# here (before the backend switch) so the HIP branch below can append
+# the HIP runtime to the same list.
+cblas_lib  = cc.find_library('cblas',  required: false)
+blas_lib   = cc.find_library('blas',   required: false)
+m_lib      = cc.find_library('m',      required: false)
+stdcpp_lib = cc.find_library('stdc++', required: false)
+if cblas_lib.found()
+  transcribe_link_libs += cblas_lib
+endif
+if blas_lib.found()
+  transcribe_link_libs += blas_lib
+endif
+if m_lib.found()
+  transcribe_link_libs += m_lib
+endif
+if stdcpp_lib.found()
+  transcribe_link_libs += stdcpp_lib
+endif
 
 rocminfo  = find_program('rocminfo',  required: false)
 hipcc     = find_program('hipcc',     required: false)
@@ -121,6 +142,17 @@ if gpu_backend == 'hip'
   endif
   transcribe_compile_defs += ['-DGGML_USE_HIP', '-DGGML_USE_CUDA']
   extra_archives += transcribe_builddir / 'ggml' / 'src' / 'ggml-hip' / 'libggml-hip.a'
+  # HIP runtime + ROCm math libs: libggml-hip.a calls hipGetLastError,
+  # hipMalloc (amdhip64), hipblasGemmEx (hipblas → rocblas), and the
+  # ROCm collectives (rccl) for multi-GPU. No pkg-config; find the
+  # shared libs in /opt/rocm/lib (or wherever hipcc was found).
+  rocm_libdir = hipcc.path().split('/bin/hipcc')[0] / 'lib'
+  foreach rocm_lib : ['amdhip64', 'hipblas', 'rocblas', 'rccl']
+    rocm_dep = cc.find_library(rocm_lib, dirs: rocm_libdir, required: false)
+    if rocm_dep.found()
+      transcribe_link_libs += rocm_dep
+    endif
+  endforeach
 elif gpu_backend == 'vulkan'
   cmake_args += ['-DTRANSCRIBE_VULKAN=ON']
   transcribe_compile_defs += ['-DGGML_USE_VULKAN']
@@ -129,22 +161,6 @@ elif gpu_backend == 'cpu'
   transcribe_compile_defs += ['-DGGML_USE_CPU']
 else
   error('Unknown GPU backend: @0@'.format(gpu_backend))
-endif
-
-# BLAS link fix: Arch splits BLAS into separate `blas` (Fortran iface,
-# libblas.so) and `cblas` (C iface, libcblas.so) packages. transcribe's
-# cblas_sgemm calls land in the C interface, but CMake's find_package(BLAS)
-# returns only libblas.so. We add libcblas (and libblas as a fallback)
-# explicitly at the kaki link step so symbols resolve once Phase 2
-# starts calling transcribe_run.
-transcribe_link_libs = []
-cblas_lib = cc.find_library('cblas', required: false)
-blas_lib  = cc.find_library('blas',  required: false)
-if cblas_lib.found()
-  transcribe_link_libs += cblas_lib
-endif
-if blas_lib.found()
-  transcribe_link_libs += blas_lib
 endif
 
 # The custom_target produces a stamp file as its meson-visible output;

@@ -1,5 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist gettext-domain="kaki">
 	<schema id="org.kaki.app" path="/org/kaki/app/">
+		<key name="model-path" type="s">
+			<default>""</default>
+			<summary>Path to the GGUF model file used for local transcription</summary>
+			<description>Absolute path to a Whisper-compatible GGUF model. When empty, Kaki scans ~/.local/share/kaki/models/ for the first *.gguf at startup.</description>
+		</key>
+		<key name="use-streaming" type="b">
+			<default>true</default>
+			<summary>Use streaming transcription when available</summary>
+			<description>When true and the loaded model supports streaming, partial transcripts are emitted while speaking. When false, the whole clip is transcribed after stop.</description>
+		</key>
+		<key name="language" type="s">
+			<default>"auto"</default>
+			<summary>Language code or 'auto' for detection</summary>
+			<description>ISO-639-1 language code passed to the transcribe runtime, or "auto" to let the model detect the language.</description>
+		</key>
+		<key name="cpu-threads" type="i">
+			<default>4</default>
+			<summary>Number of CPU threads for the transcribe.cpp runtime</summary>
+			<description>Thread count passed to SessionParams.n_threads. Ignored on GPU backends that don't use CPU threads.</description>
+		</key>
 	</schema>
 </schemalist>

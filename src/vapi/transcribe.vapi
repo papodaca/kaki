@@ -26,7 +26,7 @@ namespace Transcribe {
     /* Status                                                            */
     /* ----------------------------------------------------------------- */
 
-    [CCode (cprefix = "TRANSCRIBE_", has_type_id = false)]
+    [CCode (cname = "transcribe_status", cprefix = "TRANSCRIBE_", has_type_id = false)]
     public enum Status {
         OK = 0,
         ERR_INVALID_ARG = 1,
@@ -65,7 +65,7 @@ namespace Transcribe {
     /* Logging                                                           */
     /* ----------------------------------------------------------------- */
 
-    [CCode (cprefix = "TRANSCRIBE_LOG_LEVEL_", has_type_id = false)]
+    [CCode (cname = "transcribe_log_level", cprefix = "TRANSCRIBE_LOG_LEVEL_", has_type_id = false)]
     public enum LogLevel {
         NONE = 0,
         INFO = 1,
@@ -85,13 +85,13 @@ namespace Transcribe {
     /* Enums                                                             */
     /* ----------------------------------------------------------------- */
 
-    [CCode (cprefix = "TRANSCRIBE_TASK_", has_type_id = false)]
+    [CCode (cname = "transcribe_task", cprefix = "TRANSCRIBE_TASK_", has_type_id = false)]
     public enum Task {
         TRANSCRIBE = 0,
         TRANSLATE = 1,
     }
 
-    [CCode (cprefix = "TRANSCRIBE_TIMESTAMPS_", has_type_id = false)]
+    [CCode (cname = "transcribe_timestamp_kind", cprefix = "TRANSCRIBE_TIMESTAMPS_", has_type_id = false)]
     public enum TimestampKind {
         NONE = 0,
         AUTO = 1,
@@ -100,28 +100,28 @@ namespace Transcribe {
         TOKEN = 4,
     }
 
-    [CCode (cprefix = "TRANSCRIBE_KV_TYPE_", has_type_id = false)]
+    [CCode (cname = "transcribe_kv_type", cprefix = "TRANSCRIBE_KV_TYPE_", has_type_id = false)]
     public enum KvType {
         AUTO = 0,
         F32 = 1,
         F16 = 2,
     }
 
-    [CCode (cprefix = "TRANSCRIBE_PNC_MODE_", has_type_id = false)]
+    [CCode (cname = "transcribe_pnc_mode", cprefix = "TRANSCRIBE_PNC_MODE_", has_type_id = false)]
     public enum PncMode {
         DEFAULT = 0,
         OFF = 1,
         ON = 2,
     }
 
-    [CCode (cprefix = "TRANSCRIBE_ITN_MODE_", has_type_id = false)]
+    [CCode (cname = "transcribe_itn_mode", cprefix = "TRANSCRIBE_ITN_MODE_", has_type_id = false)]
     public enum ItnMode {
         DEFAULT = 0,
         OFF = 1,
         ON = 2,
     }
 
-    [CCode (cprefix = "TRANSCRIBE_BACKEND_", has_type_id = false)]
+    [CCode (cname = "transcribe_backend_request", cprefix = "TRANSCRIBE_BACKEND_", has_type_id = false)]
     public enum BackendRequest {
         AUTO = 0,
         CPU = 1,
@@ -131,7 +131,7 @@ namespace Transcribe {
         CUDA = 5,
     }
 
-    [CCode (cprefix = "TRANSCRIBE_FEATURE_", has_type_id = false)]
+    [CCode (cname = "transcribe_feature", cprefix = "TRANSCRIBE_FEATURE_", has_type_id = false)]
     public enum Feature {
         INITIAL_PROMPT = 0,
         TEMPERATURE_FALLBACK = 1,
@@ -173,8 +173,8 @@ namespace Transcribe {
         public TimestampKind          timestamps;
         public PncMode                 pnc;
         public ItnMode                 itn;
-        public string?                language;
-        public string?                target_language;
+        public unowned string?        language;
+        public unowned string?        target_language;
         public bool                    keep_special_tags;
         public void *                  family;        /* const struct transcribe_ext * — opaque, not bound in Phase 1 */
         public int32                   spec_k_drafts;
@@ -267,7 +267,7 @@ namespace Transcribe {
         public static Status load_file (string path, ModelLoadParams? params, out Model? out_model);
 
         [CCode (cname = "transcribe_model_get_capabilities")]
-        public Status get_capabilities (out Capabilities out_caps);
+        public Status get_capabilities (ref Capabilities out_caps);
 
         [CCode (cname = "transcribe_model_supports")]
         public bool supports (Feature feature);
@@ -304,13 +304,55 @@ namespace Transcribe {
         public int n_tokens ();
 
         [CCode (cname = "transcribe_get_segment")]
-        public Status get_segment (int i, out Segment out);
+        public Status get_segment (int i, ref Segment out);
 
         [CCode (cname = "transcribe_get_word")]
-        public Status get_word (int i, out Word out);
+        public Status get_word (int i, ref Word out);
 
         [CCode (cname = "transcribe_get_token")]
-        public Status get_token (int i, out Token out);
+        public Status get_token (int i, ref Token out);
+
+        /* Streaming entry points (Phase 2). The `update` slot of
+         * feed/finalize is nullable in C; we bind it as an opaque
+         * pointer so callers pass null when they don't want the
+         * per-call change metadata. */
+        [CCode (cname = "transcribe_stream_begin")]
+        public Status stream_begin (RunParams? run_params, StreamParams? stream_params);
+
+        [CCode (cname = "transcribe_stream_feed", array_length_pos = 1.5)]
+        public Status stream_feed (float[] pcm, void * update = null);
+
+        [CCode (cname = "transcribe_stream_finalize")]
+        public Status stream_finalize (void * update = null);
+
+        [CCode (cname = "transcribe_stream_reset")]
+        public void stream_reset ();
+
+        [CCode (cname = "transcribe_stream_get_state")]
+        public StreamState stream_get_state ();
+
+        [CCode (cname = "transcribe_stream_revision")]
+        public int stream_revision ();
+
+        [CCode (cname = "transcribe_stream_last_status")]
+        public Status stream_last_status ();
+
+        /*
+         * Pull the UI-facing text snapshot. The caller MUST initialize
+         * `out_text` via StreamText () before calling (sets struct_size);
+         * we use `ref` to honor that contract (vs `out` which would
+         * zero the struct and trip BAD_STRUCT_SIZE).
+         */
+        [CCode (cname = "transcribe_stream_get_text")]
+        public Status stream_get_text (ref StreamText out_text);
+
+        /* Cancellation. Abort callback is polled on the run thread; a
+         * return of true aborts the in-flight run/stream. */
+        [CCode (cname = "transcribe_set_abort_callback")]
+        public void set_abort_callback (AbortCallback? cb);
+
+        [CCode (cname = "transcribe_was_aborted")]
+        public bool was_aborted ();
     }
 
     /* ----------------------------------------------------------------- */
@@ -325,4 +367,87 @@ namespace Transcribe {
 
     [CCode (cname = "transcribe_backend_available")]
     public bool backend_available (BackendRequest kind);
+
+    /* ----------------------------------------------------------------- */
+    /* Streaming + cancellation (added in Phase 2)                       */
+    /* ----------------------------------------------------------------- */
+
+    [CCode (cname = "transcribe_stream_state", cprefix = "TRANSCRIBE_STREAM_", has_type_id = false)]
+    public enum StreamState {
+        IDLE     = 0,
+        ACTIVE   = 1,
+        FINISHED = 2,
+        FAILED   = 3,
+    }
+
+    [CCode (cname = "transcribe_stream_commit_policy", cprefix = "TRANSCRIBE_STREAM_COMMIT_", has_type_id = false)]
+    public enum StreamCommitPolicy {
+        AUTO          = 0,
+        ON_FINALIZE   = 1,
+        STABLE_PREFIX = 2,
+    }
+
+    /*
+     * Streaming run params. Initialize via transcribe_stream_params_init()
+     * before populating; struct_size MUST be set by the init function.
+     * `family` is opaque here (Phase 2 uses library defaults → NULL).
+     */
+    [CCode (cname = "struct transcribe_stream_params", has_type_id = false)]
+    public struct StreamParams {
+        public size_t                struct_size;
+        public void *                family;
+        public StreamCommitPolicy    commit_policy;
+        public uint32                stable_prefix_agreement_n;
+
+        [CCode (cname = "transcribe_stream_params_init")]
+        public StreamParams ();
+    }
+
+    /*
+     * Per-call change metadata from feed/finalize. Nullable in the C
+     * API (callers may pass NULL); we bind the update slot as an
+     * opaque pointer so callers can ignore it by passing null.
+     */
+    [CCode (cname = "struct transcribe_stream_update", has_type_id = false)]
+    public struct StreamUpdate {
+        public size_t struct_size;
+        public bool   result_changed;
+        public bool   is_final;
+        public int32  revision;
+        public int64  input_received_ms;
+        public int64  audio_committed_ms;
+        public int64  buffered_ms;
+        public bool   committed_changed;
+        public bool   tentative_changed;
+
+        [CCode (cname = "transcribe_stream_update_init")]
+        public StreamUpdate ();
+    }
+
+    /*
+     * UI-facing stream text snapshot. Borrowed pointers valid until
+     * the next stream/feed/finalize/reset/run/free on the session.
+     */
+    [CCode (cname = "struct transcribe_stream_text", has_type_id = false)]
+    public struct StreamText {
+        public size_t        struct_size;
+        public unowned string full_text;
+        public uint64        full_text_bytes;
+        public unowned string committed_text;
+        public uint64        committed_text_bytes;
+        public unowned string tentative_text;
+        public uint64        tentative_text_bytes;
+        public uint64        raw_tentative_start_bytes;
+
+        [CCode (cname = "transcribe_stream_text_init")]
+        public StreamText ();
+    }
+
+    /*
+     * Abort callback. Has_target=true so Vala packages the delegate
+     * target as the C user_data; the binding for
+     * transcribe_set_abort_callback drops the explicit user_data arg.
+     */
+    [CCode (cname = "transcribe_abort_callback", has_target = true)]
+    public delegate bool AbortCallback ();
 }

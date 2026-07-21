@@ -6,6 +6,8 @@ kaki_sources = [
   'main.vala',
   'application.vala',
   'window.vala',
+  'services/recorder.vala',
+  'services/transcriber.vala',
 ]
 
 kaki_deps = [
@@ -14,6 +16,10 @@ kaki_deps = [
   dependency('libadwaita-1', version: '>= 1.4'),
   transcribe_dep,
   valac.find_library('transcribe', dirs: meson.current_source_dir() / 'vapi'),
+  dependency('gstreamer-1.0'),
+  dependency('gstreamer-base-1.0'),
+  dependency('gstreamer-app-1.0'),
+  dependency('gstreamer-audio-1.0'),
 ]
 
 kaki_sources += gnome.compile_resources('kaki-resources',
