@@ -1,0 +1,4 @@
+option('gpu_backend', type: 'combo', choices: ['auto', 'hip', 'vulkan', 'cpu'], value: 'auto',
+       description: 'GPU backend for the transcribe.cpp ggml runtime')
+option('amd_targets', type: 'string', value: '',
+       description: 'AMD GPU targets (e.g. gfx1100). Empty = autodetect via rocminfo')

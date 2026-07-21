@@ -1,10 +1,14 @@
 # Build directory
 /build/
+/build_*/
 
 # Meson/Ninja artifacts
 *.ninja
 *.ninja.log
 compile_commands.json
+
+# Meson subproject build dirs (sidecar cmake outputs)
+/subprojects/*/subprojects/
 
 # Compiled objects / libraries
 *.o
