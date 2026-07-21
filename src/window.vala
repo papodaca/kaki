@@ -22,12 +22,16 @@
 public class Kaki.Window : Adw.ApplicationWindow {
     [GtkChild] private unowned Gtk.Stack stack;
     [GtkChild] private unowned Gtk.TextView transcript_view;
+    [GtkChild] private unowned Adw.ToastOverlay toast_overlay;
+    [GtkChild] private unowned Gtk.ToggleButton dictate_btn;
 
     private GLib.SimpleAction record_action;
     private GLib.SimpleAction stop_action;
+    private GLib.SimpleAction dictate_action;
 
     private Kaki.Recorder recorder;
     private Kaki.Transcriber transcriber;
+    private Kaki.Keystroke keystroke;
 
     // Mark at the start of the current recording's text region.
     // left_gravity=true keeps the mark before text inserted at it,
@@ -45,6 +49,21 @@ public class Kaki.Window : Adw.ApplicationWindow {
     // start a new recording while the previous one is finalizing.
     private bool recording = false;
 
+    // Dictation mode: when true, the streamed transcript is also
+    // injected (via `keystroke`) into whatever window had focus before
+    // Kaki minimized. `last_typed` tracks the cumulative text already
+    // sent so only the delta per partial is typed.
+    private bool dictating = false;
+    private string last_typed = "";
+
+    // Source ID for the 250 ms minimize→record delay. Stored so it can
+    // be cancelled if the window is destroyed during the delay (avoids
+    // a use-after-free when the timeout fires after `this` is freed).
+    private uint start_timeout_id = 0;
+
+    // Cached settings (constructed once; read on every partial/final).
+    private GLib.Settings settings;
+
     public Window (Gtk.Application app) {
         Object (application: app);
 
@@ -59,14 +78,35 @@ public class Kaki.Window : Adw.ApplicationWindow {
         kaki_app.set_accels_for_action ("win.stop",   {"<Control>S"});
         kaki_app.set_accels_for_action ("win.copy",   {"<Control><Shift>C"});
         kaki_app.set_accels_for_action ("win.clear",  {"<Control>Delete"});
+        kaki_app.set_accels_for_action ("win.dictate", {"<Control>D"});
     }
 
     construct {
         recorder = new Kaki.Recorder ();
         transcriber = new Kaki.Transcriber ();
+        keystroke = new Kaki.Keystroke ();
+        settings = new GLib.Settings ("org.kaki.app");
 
-        // Actions. Record/stop are SimpleAction so we can toggle
-        // their enabled state; copy/clear are always-on.
+        // Pick the keystroke backend from settings. auto|libei|ydotool|
+        // xdotool map to the Keystroke.Backend enum; an unknown value
+        // falls through to AUTO.
+        string backend_name = settings.get_string ("keystroke-backend");
+        Kaki.Keystroke.Backend preferred;
+        switch (backend_name) {
+        case "libei":   preferred = Kaki.Keystroke.Backend.LIBEI;   break;
+        case "ydotool": preferred = Kaki.Keystroke.Backend.YDOTOOL; break;
+        case "xdotool": preferred = Kaki.Keystroke.Backend.XDOTOOL; break;
+        default:        preferred = Kaki.Keystroke.Backend.AUTO;     break;
+        }
+        keystroke.init (preferred);
+
+        // Actions. Record/stop/dictate are SimpleAction so we can
+        // toggle their enabled state; copy/clear are always-on.
+        // `dictate` is stateless and toggled in its activate handler:
+        // a stateful boolean action can't be cleanly activated by a
+        // keyboard accelerator (it needs a "b" parameter that the
+        // accel machinery doesn't supply), so we manage the toggle
+        // button's active state explicitly.
         record_action = new GLib.SimpleAction ("record", null);
         record_action.activate.connect (on_record);
         add_action (record_action);
@@ -74,6 +114,10 @@ public class Kaki.Window : Adw.ApplicationWindow {
         stop_action = new GLib.SimpleAction ("stop", null);
         stop_action.activate.connect (on_stop);
         add_action (stop_action);
+
+        dictate_action = new GLib.SimpleAction ("dictate", null);
+        dictate_action.activate.connect (on_dictate_toggle);
+        add_action (dictate_action);
 
         var copy_action = new GLib.SimpleAction ("copy", null);
         copy_action.activate.connect (on_copy);
@@ -168,6 +212,11 @@ public class Kaki.Window : Adw.ApplicationWindow {
         bool on_active = stack.visible_child_name == "active";
         record_action.set_enabled (on_active && !recording);
         stop_action.set_enabled (on_active && recording);
+        // Dictate stays clickable whenever a model is loaded and a
+        // keystroke backend is available; toggling it off must remain
+        // possible mid-dictation, so it isn't gated on `!recording`.
+        dictate_action.set_enabled (
+            on_active && keystroke.backend != Kaki.Keystroke.Backend.NONE);
     }
 
     /* ----------------------------------------------------------------- */
@@ -238,6 +287,10 @@ public class Kaki.Window : Adw.ApplicationWindow {
             transcriber.stream_finalize.begin (null, (obj, res) => {
                 transcriber.stream_finalize.end (res);
                 recording = false;
+                if (dictating) {
+                    dictating = false;
+                    dictate_btn.active = false;
+                }
                 update_action_state ();
             });
         } else {
@@ -256,11 +309,101 @@ public class Kaki.Window : Adw.ApplicationWindow {
             Gtk.TextIter end_iter;
             buf.get_end_iter (out end_iter);
             buf.move_mark (utterance_start, end_iter);
+
+            // In dictation + batch mode there are no partials, so the
+            // whole final transcript is typed in one shot (with the
+            // optional trailing newline) and last_typed stays "".
+            if (dictating && auto_type_enabled ()) {
+                type_dictation (text, true);
+            }
         } catch (GLib.Error e) {
             warning ("Batch transcribe failed: %s", e.message);
         }
         recording = false;
+        if (dictating) {
+            dictating = false;
+            dictate_btn.active = false;
+        }
         update_action_state ();
+    }
+
+    /* ----------------------------------------------------------------- */
+    /* Dictation mode                                                   */
+    /* ----------------------------------------------------------------- */
+
+    private void on_dictate_toggle () {
+        if (dictating) {
+            dictate_btn.active = false;
+            stop_dictation ();
+        } else {
+            if (keystroke.backend == Kaki.Keystroke.Backend.NONE) {
+                toast_overlay.add_toast (new Adw.Toast (
+                    _("No keystroke backend available")));
+                return;
+            }
+            dictate_btn.active = true;
+            start_dictation ();
+        }
+    }
+
+    private void start_dictation () {
+        if (recording) {
+            // Record was already started via the Record button; just
+            // mark dictation so the partials also get typed out.
+            dictating = true;
+            last_typed = "";
+            return;
+        }
+        if (transcriber.model == null) {
+            warning ("Dictate pressed with no model loaded");
+            return;
+        }
+        dictating = true;
+        last_typed = "";
+
+        // Minimize so the previously focused window receives the
+        // injected keystrokes. A short delay lets the WM hand focus
+        // back before the recorder starts capturing.
+        this.minimize ();
+        start_timeout_id = GLib.Timeout.add (250, () => {
+            start_timeout_id = 0;
+            if (!dictating)
+                return false;
+            try {
+                recorder.start ();
+            } catch (GLib.Error e) {
+                warning ("Recorder start failed: %s", e.message);
+                dictating = false;
+                dictate_btn.active = false;
+                this.present ();
+                toast_overlay.add_toast (new Adw.Toast (
+                    _("Recorder start failed: %s").printf (e.message)));
+                update_action_state ();
+            }
+            return false;
+        });
+    }
+
+    private void stop_dictation () {
+        if (!dictating)
+            return;
+        if (recording) {
+            recorder.stop ();
+            // recording_stopped drives the finalize path; dictating is
+            // cleared in on_recording_stopped / transcribe_batch_async
+            // once the final transcript has been typed out.
+        } else {
+            // Recording hasn't started yet (e.g. the user toggled
+            // Dictate off during the 250 ms minimize delay). Clear
+            // dictation now; the pending Timeout will see !dictating
+            // and skip recorder.start().
+            dictating = false;
+            last_typed = "";
+            if (start_timeout_id != 0) {
+                GLib.Source.remove (start_timeout_id);
+                start_timeout_id = 0;
+            }
+        }
     }
 
     /* ----------------------------------------------------------------- */
@@ -276,6 +419,9 @@ public class Kaki.Window : Adw.ApplicationWindow {
         Gtk.TextIter insert_iter;
         buf.get_iter_at_mark (out insert_iter, utterance_start);
         buf.insert (ref insert_iter, text, text.length);
+
+        if (dictating && auto_type_enabled ())
+            type_dictation (text, false);
     }
 
     private void on_final_text (string text) {
@@ -291,6 +437,9 @@ public class Kaki.Window : Adw.ApplicationWindow {
         Gtk.TextIter new_end;
         buf.get_end_iter (out new_end);
         buf.move_mark (utterance_start, new_end);
+
+        if (dictating && auto_type_enabled ())
+            type_dictation (text, true);
     }
 
     /* ----------------------------------------------------------------- */
@@ -317,6 +466,13 @@ public class Kaki.Window : Adw.ApplicationWindow {
     private void on_recorder_error (string message) {
         warning ("Recorder error: %s", message);
         recording = false;
+        if (dictating) {
+            dictating = false;
+            dictate_btn.active = false;
+            this.present ();
+            toast_overlay.add_toast (new Adw.Toast (
+                _("Recorder error: %s").printf (message)));
+        }
         update_action_state ();
     }
 
@@ -331,8 +487,48 @@ public class Kaki.Window : Adw.ApplicationWindow {
     /* ----------------------------------------------------------------- */
 
     private bool use_streaming () {
-        var settings = new GLib.Settings ("org.kaki.app");
         return settings.get_boolean ("use-streaming")
                && transcriber.supports_streaming ();
+    }
+
+    private bool auto_type_enabled () {
+        return settings.get_boolean ("dictation-auto-type");
+    }
+
+    // Send the new suffix of `text` (relative to last_typed) through
+    // the keystroke backend. For final text, optionally append a
+    // trailing newline per the user setting. last_typed is reset to
+    // "" after a final so the next utterance's deltas start fresh.
+    //
+    // The streaming model emits monotonic prefixes (committed grows,
+    // tentative extends the tail), so the common path is a clean
+    // suffix. When the model revises (prefix mismatch), we skip the
+    // injection for that update to avoid corrupting the target
+    // window — the buffer still shows the corrected text.
+    private void type_dictation (string text, bool is_final) {
+        string delta = "";
+        if (last_typed.length > 0 && text.has_prefix (last_typed)) {
+            delta = text.substring (last_typed.length);
+        } else if (last_typed.length == 0) {
+            delta = text;
+        }
+        last_typed = text;
+
+        if (delta.length > 0 && delta.validate ())
+            keystroke.type_text.begin (delta);
+
+        if (is_final) {
+            if (settings.get_boolean ("dictation-trailing-newline"))
+                keystroke.type_text.begin ("\n");
+            last_typed = "";
+        }
+    }
+
+    public override void dispose () {
+        if (start_timeout_id != 0) {
+            GLib.Source.remove (start_timeout_id);
+            start_timeout_id = 0;
+        }
+        base.dispose ();
     }
 }

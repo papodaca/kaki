@@ -29,6 +29,20 @@ config_inc = include_directories('.')
 add_project_arguments('-DGETTEXT_PACKAGE="' + meson.project_name () + '"', language: 'c')
 
 # --------------------------------------------------------------------------- #
+# Optional libei-1.0 dependency for keystroke injection (dictation mode).    #
+# When found, HAVE_LIBEI is propagated as a Vala preprocessor symbol so the   #
+# libei backend in src/services/keystroke.vala compiles in. When absent,      #
+# dictation falls back to ydotool / xdotool.                                  #
+# --------------------------------------------------------------------------- #
+libei_dep = dependency('libei-1.0', required: false)
+have_libei = libei_dep.found()
+if have_libei
+  message('libei-1.0 found: enabling libei keystroke backend')
+else
+  message('libei-1.0 not found: dictation will use ydotool/xdotool')
+endif
+
+# --------------------------------------------------------------------------- #
 # transcribe.cpp sidecar build                                                #
 # --------------------------------------------------------------------------- #
 #

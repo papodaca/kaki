@@ -21,5 +21,25 @@
 			<summary>Number of CPU threads for the transcribe.cpp runtime</summary>
 			<description>Thread count passed to SessionParams.n_threads. Ignored on GPU backends that don't use CPU threads.</description>
 		</key>
+		<key name="dictation-auto-type" type="b">
+			<default>true</default>
+			<summary>Auto-type streamed text into focused window during dictation</summary>
+			<description>When true, the streamed transcript is injected via the keystroke backend into whatever window has keyboard focus while Kaki is minimized. When false, dictation records and transcribes but does not inject keystrokes.</description>
+		</key>
+		<key name="dictation-key-delay-ms" type="i">
+			<default>0</default>
+			<summary>Delay between keystrokes when simulating typing (ms)</summary>
+			<description>Passed to ydotool (--key-delay) or xdotool (--delay). Ignored by the libei backend, which injects events directly.</description>
+		</key>
+		<key name="dictation-trailing-newline" type="b">
+			<default>false</default>
+			<summary>Append a newline after each dictation session</summary>
+			<description>When true, a newline is typed after the final transcript of each dictation session. Useful when dictating into a chat composer that sends on Enter.</description>
+		</key>
+		<key name="keystroke-backend" type="s">
+			<default>"auto"</default>
+			<summary>Keystroke injection backend: auto|libei|ydotool|xdotool</summary>
+			<description>Forces a specific backend. "auto" picks libei (if built with support) then ydotool then xdotool based on availability and session type.</description>
+		</key>
 	</schema>
 </schemalist>

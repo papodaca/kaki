@@ -7,9 +7,19 @@
     <property name="default-width">800</property>
     <property name="default-height">600</property>
     <property name="content">
-      <object class="AdwToolbarView">
+      <object class="AdwToastOverlay" id="toast_overlay">
+        <property name="child">
+          <object class="AdwToolbarView">
         <child type="top">
           <object class="AdwHeaderBar">
+            <child type="start">
+              <object class="GtkToggleButton" id="dictate_btn">
+                <property name="icon-name">media-record-symbolic</property>
+                <property name="label" translatable="yes">Dictate</property>
+                <property name="tooltip-text" translatable="yes">Toggle dictation mode (Ctrl+D)</property>
+                <property name="action-name">win.dictate</property>
+              </object>
+            </child>
             <child type="end">
               <object class="GtkMenuButton">
                 <property name="primary">True</property>
@@ -108,6 +118,8 @@
               </object>
             </child>
           </object>
+        </property>
+      </object>
         </property>
       </object>
     </property>
