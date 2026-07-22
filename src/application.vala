@@ -19,6 +19,8 @@
  */
 
 public class Kaki.Application : Adw.Application {
+    private GLib.Settings? _settings = null;
+
     public Application () {
         Object (
             application_id: "org.kaki.app",
@@ -36,9 +38,69 @@ public class Kaki.Application : Adw.Application {
         };
         this.add_action_entries (action_entries, this);
 
-        this.set_accels_for_action ("app.quit",        {"<control>q"});
-        this.set_accels_for_action ("app.preferences", {"<control>comma"});
-        this.set_accels_for_action ("app.shortcuts",   {"<control>question"});
+        // Apply all customizable shortcuts from GSettings on startup
+        // and re-apply live whenever a shortcut-* key changes. The
+        // PreferencesDialog.ShortcutRow fires the write to GSettings;
+        // the changed:: signal here propagates the change to the
+        // application immediately (per plan § Shortcuts page: "no
+        // restart required").
+        apply_shortcuts ();
+        var s = settings;
+        foreach (string key in new string[] {
+            "shortcut-record", "shortcut-stop", "shortcut-insert",
+            "shortcut-dictate", "shortcut-prefs",
+            "shortcut-shortcuts", "shortcut-quit"
+        }) {
+            s.changed.connect ((changed_key) => {
+                if (changed_key.has_prefix ("shortcut-"))
+                    apply_shortcuts ();
+            });
+        }
+    }
+
+    public unowned GLib.Settings settings {
+        get {
+            if (_settings == null)
+                _settings = new GLib.Settings ("org.kaki.app");
+            return _settings;
+        }
+    }
+
+    /**
+     * Re-apply all customizable accelerators from GSettings. Called at
+     * startup and whenever a shortcut-* key changes. win.* actions
+     * (record/stop/insert/dictate) are routed to the application; the
+     * currently-focused window picks them up automatically.
+     */
+    public void apply_shortcuts () {
+        var s = settings;
+        // Each action takes a 1-element array of the GSettings value,
+        // or an empty array (which removes any existing binding) when
+        // the user has cleared the shortcut. The accel_array helper
+        // handles the empty-string case.
+        set_accels_for_action ("app.quit",
+            accel_array (s.get_string ("shortcut-quit")));
+        set_accels_for_action ("app.preferences",
+            accel_array (s.get_string ("shortcut-prefs")));
+        set_accels_for_action ("app.shortcuts",
+            accel_array (s.get_string ("shortcut-shortcuts")));
+        set_accels_for_action ("win.record",
+            accel_array (s.get_string ("shortcut-record")));
+        set_accels_for_action ("win.stop",
+            accel_array (s.get_string ("shortcut-stop")));
+        set_accels_for_action ("win.insert",
+            accel_array (s.get_string ("shortcut-insert")));
+        set_accels_for_action ("win.dictate",
+            accel_array (s.get_string ("shortcut-dictate")));
+    }
+
+    // Wrap a single GSettings accel string into the array shape that
+    // set_accels_for_action expects. Empty string → empty array (which
+    // removes any existing binding for the action).
+    private static string[] accel_array (string accel) {
+        if (accel == null || accel == "")
+            return new string[0];
+        return new string[] { accel };
     }
 
     public override void activate () {
@@ -63,7 +125,8 @@ public class Kaki.Application : Adw.Application {
     }
 
     private void on_preferences_action () {
-        message ("app.preferences action activated");
+        var prefs = new Kaki.PreferencesDialog (this, this.active_window);
+        prefs.present (this.active_window);
     }
 
     private void on_shortcuts_action () {

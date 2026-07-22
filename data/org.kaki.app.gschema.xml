@@ -41,5 +41,81 @@
 			<summary>Keystroke injection backend: auto|libei|ydotool|xdotool</summary>
 			<description>Forces a specific backend. "auto" picks libei (if built with support) then ydotool then xdotool based on availability and session type.</description>
 		</key>
+		<!-- Phase 4: Preferences UI -->
+		<key name="gpu-backend" type="s">
+			<default>"auto"</default>
+			<summary>Preferred GPU backend (read-only at runtime; reflects the build-time choice)</summary>
+			<description>The resolved backend baked into the binary at build time (auto / hip / vulkan / cpu). Read-only at runtime; the binary was linked against one backend only.</description>
+		</key>
+		<key name="flash-attention" type="b">
+			<default>false</default>
+			<summary>Enable flash-attention for the local Whisper model</summary>
+			<description>When true, transcribe.cpp session.run is invoked with flash attention enabled. May improve performance on supported models.</description>
+		</key>
+		<key name="transcription-source" type="s">
+			<default>"local"</default>
+			<summary>Transcription source: local|api</summary>
+			<description>"local" uses the GGUF model on disk. "api" sends audio to an OpenAI-compatible endpoint (see api-* keys).</description>
+		</key>
+		<key name="api-endpoint" type="s">
+			<default>"https://api.openai.com/v1/audio/transcriptions"</default>
+			<summary>OpenAI-compatible transcription endpoint URL</summary>
+			<description>POSTed multipart/form-data with the captured WAV. Defaults to OpenAI; point at any OpenAI-compatible server.</description>
+		</key>
+		<key name="api-model" type="s">
+			<default>"whisper-1"</default>
+			<summary>Model name sent to the transcription API</summary>
+			<description>The "model" form field passed to the endpoint. Defaults to OpenAI's whisper-1.</description>
+		</key>
+		<key name="api-response-format" type="s">
+			<default>"json"</default>
+			<summary>Response format requested from the transcription API</summary>
+			<description>One of "json", "text", or "verbose_json". Sent as the "response_format" form field when supported by the endpoint.</description>
+		</key>
+		<key name="api-temperature" type="d">
+			<default>0.0</default>
+			<summary>Sampling temperature for the transcription API (0.0–1.0)</summary>
+			<description>Passed as the "temperature" form field. 0.0 is deterministic; 1.0 is maximum randomness.</description>
+		</key>
+		<key name="api-translate" type="b">
+			<default>false</default>
+			<summary>Request English translation from the API</summary>
+			<description>When true, sends "translate=true" so the API returns an English transcript of whatever language was spoken.</description>
+		</key>
+		<key name="shortcut-record" type="s">
+			<default>"&lt;Control&gt;R"</default>
+			<summary>Accelerator for win.record</summary>
+			<description>GTK accelerator string. Applied at startup and re-applied live when changed in Preferences.</description>
+		</key>
+		<key name="shortcut-stop" type="s">
+			<default>"&lt;Control&gt;S"</default>
+			<summary>Accelerator for win.stop</summary>
+			<description>GTK accelerator string. Applied at startup and re-applied live when changed in Preferences.</description>
+		</key>
+		<key name="shortcut-insert" type="s">
+			<default>"&lt;Control&gt;I"</default>
+			<summary>Accelerator for win.insert</summary>
+			<description>GTK accelerator string. win.insert copies the transcript to the clipboard and types it into the previously focused window via the keystroke backend.</description>
+		</key>
+		<key name="shortcut-dictate" type="s">
+			<default>"&lt;Control&gt;D"</default>
+			<summary>Accelerator for win.dictate</summary>
+			<description>GTK accelerator string. Toggles dictation mode on or off.</description>
+		</key>
+		<key name="shortcut-prefs" type="s">
+			<default>"&lt;Control&gt;comma"</default>
+			<summary>Accelerator for app.preferences</summary>
+			<description>GTK accelerator string. Opens the Preferences dialog.</description>
+		</key>
+		<key name="shortcut-shortcuts" type="s">
+			<default>"&lt;Control&gt;question"</default>
+			<summary>Accelerator for app.shortcuts</summary>
+			<description>GTK accelerator string. Opens the Keyboard Shortcuts dialog.</description>
+		</key>
+		<key name="shortcut-quit" type="s">
+			<default>"&lt;Control&gt;Q"</default>
+			<summary>Accelerator for app.quit</summary>
+			<description>GTK accelerator string. Quits Kaki.</description>
+		</key>
 	</schema>
 </schemalist>

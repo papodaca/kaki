@@ -18,6 +18,9 @@ kaki_sources = [
   'services/recorder.vala',
   'services/transcriber.vala',
   'services/keystroke.vala',
+  'services/model-downloader.vala',
+  'services/secret-store.vala',
+  'ui/preferences.vala',
 ]
 
 kaki_deps = [
@@ -30,6 +33,9 @@ kaki_deps = [
   dependency('gstreamer-base-1.0'),
   dependency('gstreamer-app-1.0'),
   dependency('gstreamer-audio-1.0'),
+  # Phase 4: model downloader (libsoup-3.0) + API key storage (libsecret-1).
+  dependency('libsoup-3.0'),
+  dependency('libsecret-1'),
 ]
 
 # Optional libei-1.0 backend (dictation mode keystroke injection).

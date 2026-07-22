@@ -21,7 +21,11 @@ config_h = configuration_data()
 config_h.set_quoted('PACKAGE_VERSION', meson.project_version ())
 config_h.set_quoted('GETTEXT_PACKAGE', 'kaki')
 config_h.set_quoted('LOCALEDIR', get_option('prefix') / get_option('localedir'))
-configure_file(output: 'config.h', configuration: config_h)
+# GPU_BACKEND is filled in below, after the auto-detect block has
+# finalised the resolved backend. Config.vapi exposes it read-only.
+# The configure_file() call that writes config.h is deferred until
+# after GPU_BACKEND is set, so the emitted header reflects the
+# resolved backend.
 
 config_dep = valac.find_library ('config', dirs: srcdir)
 config_inc = include_directories('.')
@@ -119,6 +123,11 @@ if gpu_backend == 'auto'
   endif
   message('Auto-detected GPU backend: @0@'.format(gpu_backend))
 endif
+
+# Now that gpu_backend is resolved (auto-detect ran above), expose it
+# via Config.GPU_BACKEND for runtime read-only access from Vala.
+config_h.set_quoted('GPU_BACKEND', gpu_backend)
+configure_file(output: 'config.h', configuration: config_h)
 
 if gpu_backend == 'hip'
   amd_targets = get_option('amd_targets')

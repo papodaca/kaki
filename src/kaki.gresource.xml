@@ -3,5 +3,12 @@
   <gresource prefix="/org/kaki/app">
     <file preprocess="xml-stripblanks">window.ui</file>
     <file preprocess="xml-stripblanks">shortcuts-dialog.ui</file>
+    <!-- The .ui file lives under src/ui/ per the plan but is exposed at
+         /org/kaki/app/preferences.ui (no `ui/` segment) so the
+         [GtkTemplate (ui = "/org/kaki/app/preferences.ui")] attribute
+         in preferences.vala matches the path used by window.ui /
+         shortcuts-dialog.ui. -->
+    <file preprocess="xml-stripblanks" alias="preferences.ui">ui/preferences.ui</file>
+    <file alias="test-sample.wav">ui/test-sample.wav</file>
   </gresource>
 </gresources>

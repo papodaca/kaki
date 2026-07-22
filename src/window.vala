@@ -67,18 +67,14 @@ public class Kaki.Window : Adw.ApplicationWindow {
     public Window (Gtk.Application app) {
         Object (application: app);
 
-        // Accelerator registration must happen after the application
-        // property is fully set; in the construct block `application`
-        // is not yet a valid Gtk.Application (GObject construction
-        // order: construct properties are set, then construct runs,
-        // but Gtk.Window.application needs the app to be wired up
-        // at the GTK level, which happens after construct).
+        // Customizable accelerators (Record / Stop / Insert / Dictate)
+        // are read from GSettings and applied by Kaki.Application at
+        // startup and on every shortcut-* change (see
+        // application.vala::apply_shortcuts). Only the non-customizable
+        // copy / clear / test-keystroke bindings remain hardcoded here.
         var kaki_app = (Kaki.Application) app;
-        kaki_app.set_accels_for_action ("win.record", {"<Control>R"});
-        kaki_app.set_accels_for_action ("win.stop",   {"<Control>S"});
-        kaki_app.set_accels_for_action ("win.copy",   {"<Control><Shift>C"});
-        kaki_app.set_accels_for_action ("win.clear",  {"<Control>Delete"});
-        kaki_app.set_accels_for_action ("win.dictate", {"<Control>D"});
+        kaki_app.set_accels_for_action ("win.copy",  {"<Control><Shift>C"});
+        kaki_app.set_accels_for_action ("win.clear", {"<Control>Delete"});
     }
 
     construct {
@@ -101,7 +97,7 @@ public class Kaki.Window : Adw.ApplicationWindow {
         keystroke.init (preferred);
 
         // Actions. Record/stop/dictate are SimpleAction so we can
-        // toggle their enabled state; copy/clear are always-on.
+        // toggle their enabled state; copy/clear/insert are always-on.
         // `dictate` is stateless and toggled in its activate handler:
         // a stateful boolean action can't be cleanly activated by a
         // keyboard accelerator (it needs a "b" parameter that the
@@ -126,6 +122,14 @@ public class Kaki.Window : Adw.ApplicationWindow {
         var clear_action = new GLib.SimpleAction ("clear", null);
         clear_action.activate.connect (on_clear);
         add_action (clear_action);
+
+        // win.insert: copy the transcript to the clipboard AND type it
+        // into the previously focused window. Bound to the customizable
+        // shortcut-insert GSettings key (default <Control>I) via
+        // Kaki.Application.apply_shortcuts ().
+        var insert_action = new GLib.SimpleAction ("insert", null);
+        insert_action.activate.connect (on_insert);
+        add_action (insert_action);
 
         var test_keystroke_action = new GLib.SimpleAction ("test-keystroke", null);
         test_keystroke_action.activate.connect (on_test_keystroke);
@@ -426,6 +430,31 @@ public class Kaki.Window : Adw.ApplicationWindow {
                 _("Buffer is empty — type something to test with first")));
             return;
         }
+        this.minimize ();
+        GLib.Timeout.add (250, () => {
+            keystroke.type_text.begin (text);
+            return false;
+        });
+    }
+
+    // win.insert: copy the transcript to the clipboard AND type it
+    // into the previously focused window. Bound to the customizable
+    // shortcut-insert GSettings key (default <Control>I). Equivalent
+    // to on_test_keystroke with the clipboard copy added.
+    private void on_insert () {
+        if (keystroke.backend == Kaki.Keystroke.Backend.NONE) {
+            toast_overlay.add_toast (new Adw.Toast (
+                _("No keystroke backend available")));
+            return;
+        }
+        string text = transcript_view.buffer.text;
+        if (text.length == 0) {
+            toast_overlay.add_toast (new Adw.Toast (
+                _("Buffer is empty — type something to insert first")));
+            return;
+        }
+        var clipboard = Gdk.Display.get_default ().get_clipboard ();
+        clipboard.set_text (text);
         this.minimize ();
         GLib.Timeout.add (250, () => {
             keystroke.type_text.begin (text);

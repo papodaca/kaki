@@ -1,0 +1,313 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0"/>
+  <requires lib="Adw" version="1.0"/>
+  <template class="KakiPreferencesDialog" parent="AdwPreferencesDialog">
+    <property name="title" translatable="yes">Preferences</property>
+    <property name="search-enabled">True</property>
+
+    <!-- ============================================================ -->
+    <!-- General page                                                  -->
+    <!-- ============================================================ -->
+    <child>
+      <object class="AdwPreferencesPage" id="general_page">
+        <property name="name">general</property>
+        <property name="title" translatable="yes">General</property>
+        <property name="icon-name">preferences-system-symbolic</property>
+
+        <child>
+          <object class="AdwPreferencesGroup">
+            <property name="title" translatable="yes">Engine</property>
+            <child>
+              <object class="AdwComboRow" id="backend_row">
+                <property name="title" translatable="yes">Backend</property>
+                <property name="subtitle" translatable="yes">Read-only — baked in at build time</property>
+                <property name="model">
+                  <object class="GtkStringList" id="backend_list">
+                    <items>
+                      <item translatable="yes">Auto</item>
+                      <item translatable="yes">HIP (ROCm)</item>
+                      <item translatable="yes">Vulkan</item>
+                      <item translatable="yes">CPU</item>
+                    </items>
+                  </object>
+                </property>
+                <property name="expression">
+                  <lookup type="GtkStringObject" name="string"/>
+                </property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwComboRow" id="default_model_row">
+                <property name="title" translatable="yes">Default model</property>
+                <property name="subtitle" translatable="yes">GGUF loaded at startup</property>
+                <property name="expression">
+                  <lookup type="GtkStringObject" name="string"/>
+                </property>
+              </object>
+            </child>
+          </object>
+        </child>
+
+        <child>
+          <object class="AdwPreferencesGroup">
+            <property name="title" translatable="yes">Transcription</property>
+            <child>
+              <object class="AdwComboRow" id="language_row">
+                <property name="title" translatable="yes">Language</property>
+                <property name="subtitle" translatable="yes">Language code or auto-detect</property>
+                <property name="model">
+                  <object class="GtkStringList" id="language_list">
+                    <items>
+                      <item translatable="yes">Auto-detect</item>
+                      <item>en</item>
+                      <item>es</item>
+                      <item>fr</item>
+                      <item>de</item>
+                      <item>it</item>
+                      <item>pt</item>
+                      <item>nl</item>
+                      <item>pl</item>
+                      <item>ru</item>
+                      <item>uk</item>
+                      <item>tr</item>
+                      <item>ar</item>
+                      <item>hi</item>
+                      <item>zh</item>
+                      <item>ja</item>
+                      <item>ko</item>
+                    </items>
+                  </object>
+                </property>
+                <property name="expression">
+                  <lookup type="GtkStringObject" name="string"/>
+                </property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSpinRow" id="cpu_threads_row">
+                <property name="title" translatable="yes">CPU threads</property>
+                <property name="subtitle" translatable="yes">Thread count for the transcribe runtime</property>
+                <property name="adjustment">
+                  <object class="GtkAdjustment">
+                    <property name="lower">1</property>
+                    <property name="upper">32</property>
+                    <property name="step-increment">1</property>
+                    <property name="value">4</property>
+                  </object>
+                </property>
+                <property name="climb-rate">1</property>
+                <property name="digits">0</property>
+                <property name="numeric">True</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSwitchRow" id="flash_attention_row">
+                <property name="title" translatable="yes">Flash attention</property>
+                <property name="subtitle" translatable="yes">May improve performance on supported models</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSwitchRow" id="streaming_row">
+                <property name="title" translatable="yes">Streaming</property>
+                <property name="subtitle" translatable="yes">Emit partial transcripts while speaking</property>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+
+    <!-- ============================================================ -->
+    <!-- Models page                                                   -->
+    <!-- ============================================================ -->
+    <child>
+      <object class="AdwPreferencesPage" id="models_page">
+        <property name="name">models</property>
+        <property name="title" translatable="yes">Models</property>
+        <property name="icon-name">folder-download-symbolic</property>
+
+        <child>
+          <object class="AdwPreferencesGroup" id="installed_group">
+            <property name="title" translatable="yes">Installed models</property>
+            <property name="description" translatable="yes">Files in ~/.local/share/kaki/models/</property>
+          </object>
+        </child>
+
+        <child>
+          <object class="AdwPreferencesGroup" id="download_progress_group">
+            <property name="title" translatable="yes">Active download</property>
+            <property name="visible">False</property>
+          </object>
+        </child>
+
+        <child>
+          <object class="AdwPreferencesGroup">
+            <property name="title" translatable="yes">Download</property>
+            <child>
+              <object class="AdwButtonRow" id="dl_tiny_row">
+                <property name="title" translatable="yes">Whisper Tiny (English, Q8_0) — ~77 MB</property>
+                <property name="start-icon-name">folder-download-symbolic</property>
+                <signal name="activated" handler="on_download_tiny"/>
+              </object>
+            </child>
+            <child>
+              <object class="AdwButtonRow" id="dl_base_row">
+                <property name="title" translatable="yes">Whisper Base (English, Q8_0) — ~142 MB</property>
+                <property name="start-icon-name">folder-download-symbolic</property>
+                <signal name="activated" handler="on_download_base"/>
+              </object>
+            </child>
+            <child>
+              <object class="AdwButtonRow" id="dl_small_row">
+                <property name="title" translatable="yes">Whisper Small (English, Q8_0) — ~466 MB</property>
+                <property name="start-icon-name">folder-download-symbolic</property>
+                <signal name="activated" handler="on_download_small"/>
+              </object>
+            </child>
+          </object>
+        </child>
+
+        <child>
+          <object class="AdwPreferencesGroup">
+            <child>
+              <object class="AdwButtonRow" id="open_models_dir_row">
+                <property name="title" translatable="yes">Open Models Directory</property>
+                <property name="start-icon-name">folder-open-symbolic</property>
+                <signal name="activated" handler="on_open_models_dir"/>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+
+    <!-- ============================================================ -->
+    <!-- Shortcuts page                                                 -->
+    <!-- ============================================================ -->
+    <child>
+      <object class="AdwPreferencesPage" id="shortcuts_page">
+        <property name="name">shortcuts</property>
+        <property name="title" translatable="yes">Shortcuts</property>
+        <property name="icon-name">input-keyboard-symbolic</property>
+        <child>
+          <object class="AdwPreferencesGroup" id="shortcuts_group">
+            <property name="title" translatable="yes">Keyboard shortcuts</property>
+            <property name="description" translatable="yes">Click "Set…" to capture a new key combination</property>
+          </object>
+        </child>
+      </object>
+    </child>
+
+    <!-- ============================================================ -->
+    <!-- API page (OpenAI-compatible)                                   -->
+    <!-- ============================================================ -->
+    <child>
+      <object class="AdwPreferencesPage" id="api_page">
+        <property name="name">api</property>
+        <property name="title" translatable="yes">API</property>
+        <property name="icon-name">network-server-symbolic</property>
+        <child>
+          <object class="AdwPreferencesGroup">
+            <property name="title" translatable="yes">OpenAI-compatible transcription</property>
+            <child>
+              <object class="AdwComboRow" id="transcription_source_row">
+                <property name="title" translatable="yes">Transcription source</property>
+                <property name="model">
+                  <object class="GtkStringList" id="transcription_source_list">
+                    <items>
+                      <item translatable="yes">Local model</item>
+                      <item translatable="yes">OpenAI-compatible API</item>
+                    </items>
+                  </object>
+                </property>
+                <property name="expression">
+                  <lookup type="GtkStringObject" name="string"/>
+                </property>
+              </object>
+            </child>
+          </object>
+        </child>
+
+        <child>
+          <object class="AdwPreferencesGroup" id="api_params_group">
+            <property name="title" translatable="yes">Endpoint</property>
+            <child>
+              <object class="AdwEntryRow" id="api_endpoint_row">
+                <property name="title" translatable="yes">Endpoint URL</property>
+                <property name="text">https://api.openai.com/v1/audio/transcriptions</property>
+                <property name="input-purpose">url</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwEntryRow" id="api_model_row">
+                <property name="title" translatable="yes">Model name</property>
+                <property name="text">whisper-1</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwPasswordEntryRow" id="api_key_row">
+                <property name="title" translatable="yes">API key</property>
+                <property name="show-apply-button">True</property>
+                <signal name="apply" handler="on_api_key_apply"/>
+              </object>
+            </child>
+            <child>
+              <object class="AdwButtonRow" id="test_connection_row">
+                <property name="title" translatable="yes">Test connection — POSTs a 100 ms silent sample to the endpoint</property>
+                <property name="start-icon-name">emblem-ok-symbolic</property>
+                <signal name="activated" handler="on_test_connection"/>
+              </object>
+            </child>
+          </object>
+        </child>
+
+        <child>
+          <object class="AdwPreferencesGroup">
+            <property name="title" translatable="yes">Request</property>
+            <child>
+              <object class="AdwComboRow" id="response_format_row">
+                <property name="title" translatable="yes">Response format</property>
+                <property name="model">
+                  <object class="GtkStringList" id="response_format_list">
+                    <items>
+                      <item translatable="yes">JSON</item>
+                      <item translatable="yes">Text</item>
+                      <item translatable="yes">Verbose JSON</item>
+                    </items>
+                  </object>
+                </property>
+                <property name="expression">
+                  <lookup type="GtkStringObject" name="string"/>
+                </property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSpinRow" id="temperature_row">
+                <property name="title" translatable="yes">Temperature</property>
+                <property name="subtitle" translatable="yes">0.0 deterministic — 1.0 random</property>
+                <property name="adjustment">
+                  <object class="GtkAdjustment">
+                    <property name="lower">0</property>
+                    <property name="upper">1</property>
+                    <property name="step-increment">0.1</property>
+                    <property name="value">0</property>
+                  </object>
+                </property>
+                <property name="climb-rate">0.1</property>
+                <property name="digits">1</property>
+                <property name="numeric">True</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSwitchRow" id="translate_row">
+                <property name="title" translatable="yes">Translate to English</property>
+                <property name="subtitle" translatable="yes">Ask the API to return an English transcript</property>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </template>
+</interface>
