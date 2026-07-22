@@ -1,6 +1,11 @@
 # Point valac at the hand-written VAPIs in src/vapi/ (transcribe + libei).
 add_project_arguments(['--vapidir', meson.current_source_dir() / 'vapi'],
-                       language: 'vala')
+                        language: 'vala')
+
+# Posix namespace (Signal.USR1/USR2, getpid, chmod) used by the Phase 5
+# global-shortcut fallback. The posix.vapi ships with valac and is on
+# its default search path, so no --vapidir is needed.
+add_project_arguments(['--pkg', 'posix'], language: 'vala')
 
 # When libei-1.0 was detected by the top-level meson.build, expose the
 # HAVE_LIBEI Vala preprocessor symbol so the libei backend in
@@ -20,7 +25,11 @@ kaki_sources = [
   'services/keystroke.vala',
   'services/model-downloader.vala',
   'services/secret-store.vala',
+  'services/global-shortcuts.vala',
   'ui/preferences.vala',
+  # Phase 5: portable SIGRTMIN (glibc exposes it as a function-based
+  # macro, musl as a constant; posix.vapi has no binding).
+  'vapi/signal-shim.c',
 ]
 
 kaki_deps = [
@@ -55,11 +64,9 @@ kaki_sources += gnome.compile_resources('kaki-resources',
 
 # Include src/vapi/ so the C compiled from keystroke.vala finds
 # libei-shim.h (referenced by the VAPI's cheader_filename for the
-# Seat shim methods). Only needed when libei is enabled.
-kaki_inc = [ config_inc ]
-if have_libei
-  kaki_inc += include_directories('vapi')
-endif
+# Seat shim methods), and so the signal-shim.h prototype is visible to
+# application.vala's generated C for the SIGRTMIN call.
+kaki_inc = [ config_inc, include_directories('vapi') ]
 
 executable('kaki', kaki_sources,
   dependencies: kaki_deps,

@@ -38,6 +38,10 @@ public class Kaki.PreferencesDialog : Adw.PreferencesDialog {
 
     // ----- Shortcuts page -----
     [GtkChild] unowned Adw.PreferencesGroup shortcuts_group;
+    // Global-shortcut row (portal + kaki-signal fallback). Buttons are
+    // added in code; the .ui only declares the row + subtitle.
+    [GtkChild] unowned Adw.PreferencesGroup global_shortcut_group;
+    [GtkChild] unowned Adw.ActionRow global_shortcut_row;
 
     // ----- API page -----
     [GtkChild] unowned Adw.ComboRow transcription_source_row;
@@ -99,10 +103,17 @@ public class Kaki.PreferencesDialog : Adw.PreferencesDialog {
         populate_shortcuts_page ();
         populate_api_page ();
 
-        // Refresh installed models when the Models page becomes visible.
-        visible_page.notify["visible-page-name"].connect (() => {
+        // Refresh installed models when the Models page becomes visible,
+        // and re-check global-shortcut portal availability when the
+        // Shortcuts page is shown (the portal init is async and may
+        // still be in flight the first time Preferences is opened).
+        // `visible-page-name` is a property of Adw.PreferencesDialog
+        // (this), not of the page object, so the notify must be on `this`.
+        notify["visible-page-name"].connect (() => {
             if (visible_page_name == "models")
                 refresh_installed_models ();
+            else if (visible_page_name == "shortcuts")
+                refresh_global_shortcut_row ();
         });
     }
 
@@ -386,6 +397,9 @@ public class Kaki.PreferencesDialog : Adw.PreferencesDialog {
     /* =================================================================== */
 
     private void populate_shortcuts_page () {
+        populate_global_shortcut_row ();
+        refresh_global_shortcut_row ();
+
         // (label, action, setting key, default) — order matches the plan.
         var entries = new ShortcutEntry[] {
             { _("Record / Pause"),    "win.record",       "shortcut-record"    },
@@ -402,6 +416,138 @@ public class Kaki.PreferencesDialog : Adw.PreferencesDialog {
             row.shortcut_changed.connect (() => application.apply_shortcuts ());
             shortcuts_group.add (row);
         }
+    }
+
+    /* ----------------------------------------------------------------- */
+    /* Global shortcut row (portal + kaki-signal fallback)               */
+    /* ----------------------------------------------------------------- */
+
+    private Gtk.Button bind_portal_btn;
+    private Gtk.Button install_helper_btn;
+
+    private void populate_global_shortcut_row () {
+        bind_portal_btn = new Gtk.Button.with_label (_("Bind via portal"));
+        bind_portal_btn.valign = Gtk.Align.CENTER;
+        bind_portal_btn.add_css_class ("suggested-action");
+        bind_portal_btn.clicked.connect (on_bind_via_portal);
+        global_shortcut_row.add_suffix (bind_portal_btn);
+
+        install_helper_btn = new Gtk.Button.with_label (_("Install helper script"));
+        install_helper_btn.valign = Gtk.Align.CENTER;
+        install_helper_btn.clicked.connect (on_install_helper);
+        global_shortcut_row.add_suffix (install_helper_btn);
+    }
+
+    private void refresh_global_shortcut_row () {
+        if (application.global_shortcuts_available) {
+            global_shortcut_row.set_subtitle (_("Active via xdg-desktop-portal"));
+            bind_portal_btn.set_visible (true);
+        } else {
+            global_shortcut_row.set_subtitle (_(
+                "Portal unavailable — install kaki-signal as a custom shortcut"));
+            bind_portal_btn.set_visible (false);
+        }
+    }
+
+    private void on_bind_via_portal () {
+        bind_portal_btn.set_sensitive (false);
+        add_toast (new Adw.Toast (_("Assign a shortcut in the portal dialog…")));
+        application.bind_global_shortcut.begin ((obj, res) => {
+            application.bind_global_shortcut.end (res);
+            bind_portal_btn.set_sensitive (true);
+            refresh_global_shortcut_row ();
+            if (application.global_shortcuts_available)
+                add_toast (new Adw.Toast (_("Global shortcut bound")));
+            else
+                add_toast (new Adw.Toast (_("Portal binding failed — use the helper script")));
+        });
+    }
+
+    private void on_install_helper () {
+        install_helper_async.begin ();
+    }
+
+    private async void install_helper_async () {
+        // Load the bundled kaki-signal.sh from the gresource (single
+        // source of truth: data/kaki-signal.sh).
+        GLib.Bytes script;
+        try {
+            script = GLib.resources_lookup_data (
+                "/org/kaki/app/kaki-signal.sh", 0);
+        } catch (GLib.Error e) {
+            add_toast (new Adw.Toast (
+                _(@"Missing bundled kaki-signal.sh: $(e.message)")));
+            return;
+        }
+
+        // Install to ~/.local/bin (commonly on PATH). Create the dir.
+        string local_bin = GLib.Path.build_filename (
+            GLib.Environment.get_home_dir (), ".local", "bin");
+        int rc = GLib.DirUtils.create_with_parents (local_bin, 0755);
+        if (rc != 0) {
+            add_toast (new Adw.Toast (
+                _(@"Cannot create $local_bin: errno %d").printf (rc)));
+            return;
+        }
+        string dest = GLib.Path.build_filename (local_bin, "kaki-signal");
+        // Pass the byte length explicitly: the gresource blob is NOT
+        // null-terminated, so set_contents' default length=-1 would
+        // strlen past the end into the next packed resource.
+        try {
+            GLib.FileUtils.set_contents (dest, (string) script.get_data (),
+                (ssize_t) script.get_size ());
+        } catch (GLib.Error e) {
+            add_toast (new Adw.Toast (
+                _(@"Cannot write $dest: $(e.message)")));
+            return;
+        }
+        // chmod 0755 — set_contents' default mode isn't executable, so
+        // the helper would be unusable as a shortcut command. Check the
+        // return: a silent failure leaves the user with a non-runnable
+        // script and a dialog that claimed success.
+        if (Posix.chmod (dest, 0755) != 0) {
+            add_toast (new Adw.Toast (
+                _(@"Installed $dest but could not make it executable")));
+            return;
+        }
+
+        string installed_note;
+        if (command_on_path ("kaki-signal"))
+            installed_note = _(@"Installed to $(GLib.Path.get_basename (dest)). Already on PATH.");
+        else
+            installed_note = _(@"Installed to $dest. Log out/in if it isn't on PATH yet.");
+
+        show_gnome_shortcut_instructions (installed_note);
+    }
+
+    // Pop up a small dialog with the GNOME custom-shortcut steps and a
+    // "Copy command" button that copies `kaki-signal toggle` to the
+    // clipboard so the user can paste it straight into GNOME Settings.
+    private void show_gnome_shortcut_instructions (string installed_note) {
+        var dlg = new Adw.AlertDialog (_("Bind kaki-signal in GNOME"),
+            installed_note + "\n\n" +
+            _("Open Settings → Keyboard → View and Customize Shortcuts → Custom Shortcuts") + "\n" +
+            _("Name: Kaki Toggle Recording") + "\n" +
+            _("Command: kaki-signal toggle") + "\n" +
+            _("Shortcut: (press your combo)"));
+
+        dlg.add_response ("copy", _("Copy command"));
+        dlg.add_response ("close", _("Close"));
+        dlg.set_response_appearance ("copy", Adw.ResponseAppearance.SUGGESTED);
+        dlg.set_response_appearance ("close", Adw.ResponseAppearance.DEFAULT);
+        dlg.response.connect ((resp) => {
+            if (resp == "copy") {
+                var clipboard = Gdk.Display.get_default ().get_clipboard ();
+                clipboard.set_text ("kaki-signal toggle");
+                add_toast (new Adw.Toast (_("Copied “kaki-signal toggle”")));
+            }
+        });
+        dlg.present (parent_window);
+    }
+
+    private static bool command_on_path (string cmd) {
+        string? path = GLib.Environment.find_program_in_path (cmd);
+        return path != null;
     }
 
     /* =================================================================== */

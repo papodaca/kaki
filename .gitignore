@@ -16,6 +16,9 @@ compile_commands.json
 *.so
 *.gresource
 
+# Stray glib-compile-schemas output from `ninja test` schema validation
+/data/gschemas.compiled
+
 # Editor / VCS
 *~
 .*.swp

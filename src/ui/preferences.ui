@@ -191,6 +191,18 @@
         <property name="title" translatable="yes">Shortcuts</property>
         <property name="icon-name">input-keyboard-symbolic</property>
         <child>
+          <object class="AdwPreferencesGroup" id="global_shortcut_group">
+            <property name="title" translatable="yes">Global shortcut</property>
+            <property name="description" translatable="yes">Toggle recording from anywhere on the desktop</property>
+            <child>
+              <object class="AdwActionRow" id="global_shortcut_row">
+                <property name="title" translatable="yes">Toggle recording</property>
+                <property name="subtitle" translatable="yes">Checking portal availability…</property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
           <object class="AdwPreferencesGroup" id="shortcuts_group">
             <property name="title" translatable="yes">Keyboard shortcuts</property>
             <property name="description" translatable="yes">Click "Set…" to capture a new key combination</property>

@@ -43,4 +43,14 @@ configure_file(
   install_dir: get_option('datadir') / 'dbus-1' / 'services'
 )
 
+# Phase 5: fallback global-shortcut helper. Installed next to the kaki
+# executable so users on portal-less desktops can bind `kaki-signal
+# toggle` as a GNOME custom shortcut. The Preferences Shortcuts page
+# offers to copy the same script to ~/.local/bin for uninstalled builds.
+install_data('kaki-signal.sh',
+  install_dir: get_option('bindir'),
+  install_mode: 'rwxr-xr-x',
+  rename: 'kaki-signal'
+)
+
 subdir('icons')

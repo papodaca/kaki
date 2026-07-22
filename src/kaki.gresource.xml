@@ -10,5 +10,11 @@
          shortcuts-dialog.ui. -->
     <file preprocess="xml-stripblanks" alias="preferences.ui">ui/preferences.ui</file>
     <file alias="test-sample.wav">ui/test-sample.wav</file>
+    <!-- Phase 5: the fallback helper script is also installed to bindir
+         by data/meson.build, but for uninstalled/flatpak builds the
+         Preferences "Install helper script" button writes this copy to
+         ~/.local/bin/kaki-signal so it's on PATH. Single source of
+         truth: data/kaki-signal.sh. -->
+    <file alias="kaki-signal.sh">../data/kaki-signal.sh</file>
   </gresource>
 </gresources>

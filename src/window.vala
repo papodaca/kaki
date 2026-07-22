@@ -228,6 +228,47 @@ public class Kaki.Window : Adw.ApplicationWindow {
     }
 
     /* ----------------------------------------------------------------- */
+    /* Global-shortcut entry points                                       */
+    /* ----------------------------------------------------------------- */
+
+    // Public wrappers used by the global-shortcut handlers in
+    // Kaki.Application (portal Activated signal + Unix USR1/USR2/RTMIN+1
+    // fallback). They delegate to the private activate handlers, which
+    // already guard against re-entrant / no-op calls, so the action-
+    // enabled gating (which depends on the in-window stack page being
+    // "active") is deliberately bypassed — a global toggle must work
+    // even when the window is minimized or on a non-"active" page.
+    public bool is_recording { get { return recording; } }
+
+    public void record () { on_record (); }
+    public void stop ()   { on_stop (); }
+
+    // Global-shortcut entry point: drive the full dictation flow.
+    // Toggle on: minimize Kaki, capture the previously focused window,
+    // start recording, and stream partial transcripts into that
+    // window via the keystroke backend. Toggle off: stop recording,
+    // finalize, and type the final text. Reuses on_dictate_toggle
+    // verbatim so the in-window Dictate button and the global shortcut
+    // stay in sync (dictate_btn.active, dictating, last_typed all flip
+    // through the same path).
+    public void toggle_dictation () { on_dictate_toggle (); }
+
+    // Refuse the global "insert" shortcut while dictation is streaming
+    // typed partials: on_insert() types the buffer via the keystroke
+    // backend, which would interleave with the in-flight dictation
+    // typing and garble the target window. The in-window win.insert
+    // action (which calls on_insert directly) keeps its pre-existing
+    // behavior; only the new global-shortcut entry point is guarded.
+    public void insert () {
+        if (dictating) {
+            toast_overlay.add_toast (new Adw.Toast (
+                _("Stop dictation before inserting text")));
+            return;
+        }
+        on_insert ();
+    }
+
+    /* ----------------------------------------------------------------- */
     /* Record / stop                                                      */
     /* ----------------------------------------------------------------- */
 
