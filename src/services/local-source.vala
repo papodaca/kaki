@@ -1,8 +1,14 @@
-/* transcriber.vala
+/* local-source.vala
  *
  * Copyright 2026 Ethan
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * Local TranscriptionSource backed by the Phase 1 transcribe.cpp
+ * engine. Refactored in Phase 6 from the Phase 2 `Kaki.Transcriber`
+ * class to implement the `Kaki.TranscriptionSource` interface so
+ * the window can dispatch between local and remote backends via
+ * the `transcription-source` GSettings key.
  *
  * Async wrapper over the Phase 1 VAPI. Two paths:
  *
@@ -10,6 +16,15 @@
  *   - Stream: stream_begin → stream_feed (chunk) … stream_finalize →
  *             emits partial_text (committed + tentative) while
  *             feeding and final_text (committed) on finalize.
+ *
+ * prepare ()
+ * ---------
+ * Reads the user-configured `model-path` GSettings key (set via the
+ * Preferences → General → Default model combo, or the "Set as
+ * default" button on the Models page). When empty, falls back to the
+ * first *.gguf in ~/.local/share/kaki/models/. Loads the model on a
+ * worker thread and throws on failure — the caller (window.vala)
+ * switches its stack to the "empty" page on error.
  *
  * Threading model
  * ---------------
@@ -23,19 +38,20 @@
  * Workers resume the async method via `Idle.add ((owned) callback)`
  * — the canonical Vala async pattern. The continuation (post-yield)
  * runs on the GLib main thread, so `partial_text` / `final_text`
- * / `load_failed` signals are emitted there and window handlers can
- * touch GTK directly.
+ * signals are emitted there and window handlers can touch GTK
+ * directly.
  */
 
-public class Kaki.Transcriber : GLib.Object {
+public class Kaki.LocalSource : GLib.Object, TranscriptionSource {
     private Transcribe.Model? _model;
     public unowned Transcribe.Model? model {
         get { return _model; }
     }
 
-    public signal void partial_text (string text);
-    public signal void final_text  (string text);
-    public signal void load_failed (string message);
+    // signals partial_text / final_text / error_occurred are inherited
+    // from the TranscriptionSource interface and emitted by name below.
+
+    public bool can_stream { get { return _caps.supports_streaming; } }
 
     private Transcribe.Session?     _session;
     private Transcribe.Capabilities _caps;
@@ -46,7 +62,7 @@ public class Kaki.Transcriber : GLib.Object {
     private Transcribe.StreamParams _stream_params;
     private string                  _language_buf = "";
 
-    public Transcriber () {
+    public LocalSource () {
         var r = Transcribe.init_backends_default ();
         if (r != Transcribe.Status.OK) {
             warning ("transcribe_init_backends_default: %s", r.to_string ());
@@ -54,7 +70,7 @@ public class Kaki.Transcriber : GLib.Object {
     }
 
     /* ----------------------------------------------------------------- */
-    /* load_model                                                         */
+    /* prepare — model discovery + load                                   */
     /* ----------------------------------------------------------------- */
 
     private class LoadResult : GLib.Object {
@@ -64,8 +80,14 @@ public class Kaki.Transcriber : GLib.Object {
         public string?                 error;
     }
 
-    public async bool load_model (string path, Cancellable? cancellable = null) {
-        SourceFunc callback = load_model.callback;
+    public async void prepare () throws GLib.Error {
+        string path = resolve_model_path ();
+        if (path == null || path == "") {
+            throw new IOError.NOT_FOUND (
+                "No model configured. Set a model in Preferences or place a .gguf in ~/.local/share/kaki/models/.");
+        }
+
+        SourceFunc callback = prepare.callback;
         string local_path = path;
         LoadResult? result = null;
 
@@ -77,14 +99,40 @@ public class Kaki.Transcriber : GLib.Object {
         yield;
 
         if (result == null || result.model == null || result.session == null) {
-            load_failed (result != null ? (result.error ?? "unknown error") : "unknown error");
-            return false;
+            throw new IOError.FAILED (
+                result != null ? (result.error ?? "unknown error") : "unknown error");
         }
         _model   = (owned) result.model;
         _session = (owned) result.session;
         _caps    = result.caps;
         build_run_params ();
-        return true;
+    }
+
+    // Read the user-configured model-path (Preferences → General →
+    // Default model combo, or the "Set as default" button on the
+    // Models page). When empty, fall back to the first *.gguf in
+    // ~/.local/share/kaki/models/ — the same scan the Phase 2
+    // window.vala performed, moved here so prepare() is self-contained.
+    private string resolve_model_path () {
+        var settings = new GLib.Settings ("org.kaki.app");
+        string path = settings.get_string ("model-path");
+        if (path != null && path != "") {
+            return path;
+        }
+        string models_dir = GLib.Path.build_filename (
+            GLib.Environment.get_user_data_dir (), "kaki", "models");
+        try {
+            var dir = GLib.Dir.open (models_dir, 0);
+            string? name;
+            while ((name = dir.read_name ()) != null) {
+                if (name.has_suffix (".gguf")) {
+                    return GLib.Path.build_filename (models_dir, name);
+                }
+            }
+        } catch (GLib.FileError e) {
+            // Directory missing or unreadable: treat as no model.
+        }
+        return "";
     }
 
     private static LoadResult load_model_sync (string path) {
@@ -345,9 +393,5 @@ public class Kaki.Transcriber : GLib.Object {
         string final_text_copy = text.dup ();
         _last_partial_emit = "";
         final_text (final_text_copy);
-    }
-
-    public bool supports_streaming () {
-        return _caps.supports_streaming;
     }
 }

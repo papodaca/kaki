@@ -21,7 +21,9 @@ kaki_sources = [
   'application.vala',
   'window.vala',
   'services/recorder.vala',
-  'services/transcriber.vala',
+  'services/transcription-source.vala',
+  'services/local-source.vala',
+  'services/remote-openai-source.vala',
   'services/keystroke.vala',
   'services/model-downloader.vala',
   'services/secret-store.vala',
@@ -45,6 +47,9 @@ kaki_deps = [
   # Phase 4: model downloader (libsoup-3.0) + API key storage (libsecret-1).
   dependency('libsoup-3.0'),
   dependency('libsecret-1'),
+  # Phase 6: JSON parsing for the OpenAI-compatible /v1/audio/transcriptions
+  # response ({"text": "..."} for json / verbose_json).
+  dependency('json-glib-1.0'),
 ]
 
 # Optional libei-1.0 backend (dictation mode keystroke injection).

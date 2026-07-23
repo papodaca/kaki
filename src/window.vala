@@ -30,7 +30,7 @@ public class Kaki.Window : Adw.ApplicationWindow {
     private GLib.SimpleAction dictate_action;
 
     private Kaki.Recorder recorder;
-    private Kaki.Transcriber transcriber;
+    private Kaki.TranscriptionSource source;
     private Kaki.Keystroke keystroke;
 
     // Mark at the start of the current recording's text region.
@@ -79,7 +79,6 @@ public class Kaki.Window : Adw.ApplicationWindow {
 
     construct {
         recorder = new Kaki.Recorder ();
-        transcriber = new Kaki.Transcriber ();
         keystroke = new Kaki.Keystroke ();
         settings = new GLib.Settings ("org.kaki.app");
 
@@ -141,15 +140,14 @@ public class Kaki.Window : Adw.ApplicationWindow {
         recorder.recording_stopped.connect (on_recording_stopped);
         recorder.error_occurred.connect (on_recorder_error);
 
-        // Transcriber signals.
-        transcriber.partial_text.connect (on_partial_text);
-        transcriber.final_text.connect (on_final_text);
-        transcriber.load_failed.connect (on_load_failed);
+        // Source signals (partial_text / final_text / error_occurred)
+        // are wired in prepare_source_async () once the source is built.
 
-        // Auto-load model when the window is mapped (the `realize`
-        // signal is shadowed by Gtk.Native's realize() method in the
-        // GTK4 VAPI, so we use `map` which fires right after realize
-        // when the window becomes visible).
+        // Auto-prepare the source (local model or remote API) when the
+        // window is mapped (the `realize` signal is shadowed by
+        // Gtk.Native's realize() method in the GTK4 VAPI, so we use
+        // `map` which fires right after realize when the window
+        // becomes visible).
         this.map.connect (on_realize);
 
         // Place the utterance-start mark at the buffer origin; it
@@ -164,52 +162,60 @@ public class Kaki.Window : Adw.ApplicationWindow {
     }
 
     /* ----------------------------------------------------------------- */
-    /* Model discovery + auto-load                                        */
+    /* Source dispatch + prepare                                          */
     /* ----------------------------------------------------------------- */
 
     private void on_realize () {
-        string path = resolve_model_path ();
-        if (path == null || path == "") {
-            stack.visible_child_name = "empty";
-            update_action_state ();
-            return;
-        }
-        stack.visible_child_name = "loading";
-        load_model_async.begin (path);
+        prepare_source_async.begin ();
     }
 
-    private async void load_model_async (string path) {
-        bool ok = yield transcriber.load_model (path);
-        if (ok) {
-            stack.visible_child_name = "active";
+    // Build the configured TranscriptionSource (local or remote per
+    // the transcription-source GSettings key), wire its signals, and
+    // run prepare() — LocalSource reads the user-configured model-path
+    // and loads the model, RemoteOpenAISource validates endpoint +
+    // model. Stack pages: "loading" while prepare runs, "active" on
+    // success, "empty" on failure (with a toast so a missing key /
+    // bad endpoint / no model configured is visible).
+    private async void prepare_source_async () {
+        string src = settings.get_string ("transcription-source");
+        if (src == "api") {
+            var remote = new Kaki.RemoteOpenAISource ();
+            remote.endpoint         = settings.get_string ("api-endpoint");
+            remote.model            = settings.get_string ("api-model");
+            remote.response_format  = settings.get_string ("api-response-format");
+            remote.temperature      = settings.get_double ("api-temperature");
+            remote.translate        = settings.get_boolean ("api-translate");
+            try {
+                var secret = new Kaki.SecretStore ();
+                string? key = yield secret.get_api_key ();
+                remote.api_key = key ?? "";
+            } catch (GLib.Error e) {
+                warning ("Cannot read API key from keyring: %s", e.message);
+                remote.api_key = "";
+            }
+            source = remote;
         } else {
-            // load_failed signal already fired from the transcriber.
+            source = new Kaki.LocalSource ();
+        }
+
+        // Source signals fire on the main thread for both backends
+        // (LocalSource resumes its worker threads via Idle.add;
+        // RemoteOpenAISource runs entirely on the main thread).
+        source.partial_text.connect (on_partial_text);
+        source.final_text.connect (on_final_text);
+        source.error_occurred.connect (on_source_error);
+
+        stack.visible_child_name = "loading";
+        try {
+            yield source.prepare ();
+            stack.visible_child_name = "active";
+        } catch (GLib.Error e) {
+            warning ("Source prepare failed: %s", e.message);
             stack.visible_child_name = "empty";
+            toast_overlay.add_toast (new Adw.Toast (
+                _("Prepare failed: %s").printf (e.message)));
         }
         update_action_state ();
-    }
-
-    private string resolve_model_path () {
-        var settings = new GLib.Settings ("org.kaki.app");
-        string path = settings.get_string ("model-path");
-        if (path != null && path != "") {
-            return path;
-        }
-        // Fall back to the first *.gguf in ~/.local/share/kaki/models/.
-        string models_dir = GLib.Path.build_filename (
-            GLib.Environment.get_user_data_dir (), "kaki", "models");
-        try {
-            var dir = GLib.Dir.open (models_dir, 0);
-            string? name;
-            while ((name = dir.read_name ()) != null) {
-                if (name.has_suffix (".gguf")) {
-                    return GLib.Path.build_filename (models_dir, name);
-                }
-            }
-        } catch (GLib.FileError e) {
-            // Directory missing or unreadable: treat as no model.
-        }
-        return "";
     }
 
     /* ----------------------------------------------------------------- */
@@ -220,7 +226,7 @@ public class Kaki.Window : Adw.ApplicationWindow {
         bool on_active = stack.visible_child_name == "active";
         record_action.set_enabled (on_active && !recording);
         stop_action.set_enabled (on_active && recording);
-        // Dictate stays clickable whenever a model is loaded and a
+        // Dictate stays clickable whenever a source is prepared and a
         // keystroke backend is available; toggling it off must remain
         // possible mid-dictation, so it isn't gated on `!recording`.
         dictate_action.set_enabled (
@@ -275,10 +281,10 @@ public class Kaki.Window : Adw.ApplicationWindow {
     private void on_record () {
         if (recording)
             return;
-        if (transcriber.model == null) {
+        if (source == null) {
             // We only land here if the stack is "active", which
-            // implies the model loaded. Defensive guard anyway.
-            warning ("Record pressed with no model loaded");
+            // implies the source prepared. Defensive guard anyway.
+            warning ("Record pressed with no source prepared");
             return;
         }
         try {
@@ -301,7 +307,7 @@ public class Kaki.Window : Adw.ApplicationWindow {
         buf.move_mark (utterance_start, end_iter);
 
         if (use_streaming ()) {
-            transcriber.stream_begin.begin ();
+            source.stream_begin.begin ();
         } else {
             batch_buf = new float[0];
         }
@@ -313,7 +319,7 @@ public class Kaki.Window : Adw.ApplicationWindow {
         if (!recording)
             return;
         if (use_streaming ()) {
-            transcriber.stream_feed.begin (samples);
+            source.stream_feed.begin (samples);
         } else {
             // Append to the batch accumulator.
             int old_len = batch_buf.length;
@@ -333,8 +339,8 @@ public class Kaki.Window : Adw.ApplicationWindow {
 
     private void on_recording_stopped () {
         if (use_streaming ()) {
-            transcriber.stream_finalize.begin (null, (obj, res) => {
-                transcriber.stream_finalize.end (res);
+            source.stream_finalize.begin (null, (obj, res) => {
+                source.stream_finalize.end (res);
                 recording = false;
                 if (dictating) {
                     dictating = false;
@@ -349,7 +355,7 @@ public class Kaki.Window : Adw.ApplicationWindow {
 
     private async void transcribe_batch_async () {
         try {
-            string text = yield transcriber.transcribe_batch (batch_buf);
+            string text = yield source.transcribe_batch (batch_buf);
             var buf = transcript_view.buffer;
             Gtk.TextIter mark_iter;
             buf.get_iter_at_mark (out mark_iter, utterance_start);
@@ -403,8 +409,8 @@ public class Kaki.Window : Adw.ApplicationWindow {
             last_typed = "";
             return;
         }
-        if (transcriber.model == null) {
-            warning ("Dictate pressed with no model loaded");
+        if (source == null) {
+            warning ("Dictate pressed with no source prepared");
             return;
         }
         dictating = true;
@@ -504,7 +510,7 @@ public class Kaki.Window : Adw.ApplicationWindow {
     }
 
     /* ----------------------------------------------------------------- */
-    /* Transcriber text → buffer                                          */
+    /* Source text → buffer                                               */
     /* ----------------------------------------------------------------- */
 
     private void on_partial_text (string text) {
@@ -573,9 +579,10 @@ public class Kaki.Window : Adw.ApplicationWindow {
         update_action_state ();
     }
 
-    private void on_load_failed (string message) {
-        warning ("Model load failed: %s", message);
-        stack.visible_child_name = "empty";
+    private void on_source_error (string message) {
+        warning ("Source error: %s", message);
+        toast_overlay.add_toast (new Adw.Toast (
+            _("Source error: %s").printf (message)));
         update_action_state ();
     }
 
@@ -585,7 +592,7 @@ public class Kaki.Window : Adw.ApplicationWindow {
 
     private bool use_streaming () {
         return settings.get_boolean ("use-streaming")
-               && transcriber.supports_streaming ();
+               && source.can_stream;
     }
 
     private bool auto_type_enabled () {

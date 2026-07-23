@@ -12,8 +12,8 @@
  *     appsink (emit-signals=true, sync=false, drop=true, max-buffers=4)
  *
  * `chunk_ready` fires on the GStreamer streaming thread; consumers must
- * only do thread-safe work in their handler (the Transcriber pushes to
- * an AsyncQueue, which is safe from any thread).
+ * only do thread-safe work in their handler (the window pushes the chunk
+ * to the TranscriptionSource, which is safe from any thread).
  */
 
 using Gst;
