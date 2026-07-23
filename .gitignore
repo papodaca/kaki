@@ -27,3 +27,8 @@ compile_commands.json
 
 # Local pytest venv (see tests/README.md)
 /tests/.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
