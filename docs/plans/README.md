@@ -25,6 +25,8 @@ local inference engine and supporting OpenAI-compatible remote APIs.
 | 5 | [`phase-5-global-shortcuts.md`](phase-5-global-shortcuts.md) | xdg-desktop-portal GlobalShortcuts + shell-script fallback |
 | 6 | [`phase-6-remote-openai-backend.md`](phase-6-remote-openai-backend.md) | OpenAI-compatible remote transcription backend |
 | 7 | [`phase-7-testing-framework.md`](phase-7-testing-framework.md) | pytest + meson integration suite (automate `docs/testing.md`) |
+| 8 | [`phase-8-shortcuts-dialog-sync.md`](phase-8-shortcuts-dialog-sync.md) | Expand Shortcuts dialog to match Preferences (+ Copy / Clear) |
+| 9 | [`phase-9-i18n.md`](phase-9-i18n.md) | Finish gettext/`po/` pipeline, string audit, commit `kaki.pot` |
 
 ## Architectural decisions
 
@@ -78,6 +80,8 @@ meson setup build -Dgpu_backend=cpu                        # CPU
 6. Phase 5 — global shortcuts + shell-script fallback
 7. Phase 6 — OpenAI-compatible remote backend
 8. Phase 7 — testing / integration framework (`meson test` + pytest)
+9. Phase 8 — Shortcuts dialog coverage sync with Preferences
+10. Phase 9 — gettext i18n (`po/kaki.pot`, string audit, contributor docs)
 
 ## Open follow-ups
 
@@ -90,3 +94,7 @@ meson setup build -Dgpu_backend=cpu                        # CPU
 4. Phase 7 follow-ups: Vala unit tests for extracted WAV/multipart
    helpers; live shortcut-rebind / mic / portal E2E remain manual
    (see [`docs/testing.md`](../testing.md)).
+5. Phase 8: expand `shortcuts-dialog.ui` so it lists all Preferences
+   accelerators plus Copy / Clear (GSettings store already correct).
+6. Phase 9: non-English `.po` locales (Weblate / Damned Lies optional);
+   polish placeholder AppStream/desktop marketing copy separately.
