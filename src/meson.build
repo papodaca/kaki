@@ -73,7 +73,9 @@ kaki_sources += gnome.compile_resources('kaki-resources',
 # application.vala's generated C for the SIGRTMIN call.
 kaki_inc = [ config_inc, include_directories('vapi') ]
 
-executable('kaki', kaki_sources,
+# Assigned so tests/meson.build can depend on the binary and pass
+# KAKI_BIN via kaki.full_path().
+kaki = executable('kaki', kaki_sources,
   dependencies: kaki_deps,
   include_directories: kaki_inc,
        install: true,

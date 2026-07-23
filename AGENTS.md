@@ -46,7 +46,8 @@ git submodule update --init --recursive   # required once (and in every new work
 meson setup build                         # gpu_backend=auto (HIP→Vulkan→CPU)
 ninja -C build
 ./build/src/kaki
-meson test -C build --print-errorlogs     # 3 metadata validators only
+meson test -C build --print-errorlogs     # metadata + pytest suites
+meson test -C build --suite unit          # no Xvfb / keyring required
 ```
 
 Force backend:
@@ -67,8 +68,7 @@ glib-compile-schemas /tmp/kaki-schemas/
 GSETTINGS_SCHEMA_DIR=/tmp/kaki-schemas ./build/src/kaki
 ```
 
-Manual verification recipes: `docs/testing.md`. There is **no** Vala/unit
-test suite yet (Phase 7 planned).
+Automated suites + manual gap list: `docs/testing.md` / `tests/README.md`.
 
 ## Architecture agents miss
 
@@ -121,11 +121,11 @@ static lib. Submodule must be initialized.
 
 ## Plans status
 
-Phases 0–6 are in tree. Still open (see `docs/plans/`):
+Phases 0–7 are in tree (Phase 7 = pytest suites under `meson test`).
+Still open (see `docs/plans/`):
 
 | # | Goal |
 | --- | --- |
-| 7 | pytest + meson integration suite (automate `docs/testing.md`) |
 | 8 | Expand `shortcuts-dialog.ui` to match Preferences (+ Copy / Clear) — dialog is still Quit/Show Shortcuts only |
 | 9 | Finish gettext/`po/` (`kaki.pot` not committed yet; `LINGUAS` empty) |
 

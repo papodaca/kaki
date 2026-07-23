@@ -87,14 +87,12 @@ meson setup build -Dgpu_backend=cpu                        # CPU
 
 1. Phase 5 shell-script fallback: user offered to share an example from
    another app.
-2. Phase 4 "Test connection" — keep as a stub or wire to a real POST in
-   the same phase.
-3. Default GGUF download list — Whisper Tiny/Base/Small (English) only,
+2. Default GGUF download list — Whisper Tiny/Base/Small (English) only,
    or also include multilingual variants and Parakeet.
-4. Phase 7 follow-ups: Vala unit tests for extracted WAV/multipart
+3. Phase 7 follow-ups: Vala unit tests for extracted WAV/multipart
    helpers; live shortcut-rebind / mic / portal E2E remain manual
    (see [`docs/testing.md`](../testing.md)).
-5. Phase 8: expand `shortcuts-dialog.ui` so it lists all Preferences
+4. Phase 8: expand `shortcuts-dialog.ui` so it lists all Preferences
    accelerators plus Copy / Clear (GSettings store already correct).
-6. Phase 9: non-English `.po` locales (Weblate / Damned Lies optional);
+5. Phase 9: non-English `.po` locales (Weblate / Damned Lies optional);
    polish placeholder AppStream/desktop marketing copy separately.

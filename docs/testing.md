@@ -1,24 +1,42 @@
 # Testing
 
-Kaki has no automated test suite. The build ships three meson tests
-that validate static metadata, and each phase is verified manually
-against its plan's § Verification section. Phase 4 (Preferences UI)
-introduced GTK/libsecret/libsoup code that can't be exercised by a
-plain unit test without a display and a keyring, so verification was
-done headless under Xvfb plus a handful of targeted script-driven
-checks against the real subprocesses our code calls (libsoup POST,
-libsecret store, HuggingFace URLs, gresource bundle).
+Kaki's automated suite is registered under `meson test`. It covers schemas,
+gresources, secrets, HTTP contracts, and a headless preferences smoke —
+without live mic capture, GPU inference, portal UI binding, or real OpenAI /
+HuggingFace downloads (except the optional `network` suite).
 
-This document records what was checked, how, and why — so the same
-checks can be re-run after future changes.
+## Automated entry point
 
-## Built-in meson tests
-
-```
+```bash
+meson setup build -Dgpu_backend=cpu
+ninja -C build
 meson test -C build --print-errorlogs
 ```
 
-Three tests, all defined in `data/meson.build`:
+| Suite | Meson | Role |
+| --- | --- | --- |
+| Metadata | `data/meson.build` | desktop / schema / appstream validators |
+| `unit` | `pytest tests/unit` | GSettings, WAV, gresource (§1, §7, §9 below) |
+| `integration` | `pytest tests/integration` | secret-tool, multipart, mock download + remote (§6, §8) |
+| `ui` | `pytest tests/ui` | Xvfb launch + preferences pixel smoke (§3, §4) |
+| `network` | `pytest tests/network` | HuggingFace HEAD (§5) — opt-in |
+
+```bash
+meson test -C build --suite unit
+meson test -C build --suite integration
+meson test -C build --suite ui
+meson test -C build --suite network
+```
+
+Host packages and a local venv recipe: [`tests/README.md`](../tests/README.md).
+Missing Xvfb / keyring tools make the matching tests **skip**, not fail.
+
+The numbered sections below are the human-readable source of truth for what
+each automated check asserts (and how to re-run a single recipe by hand).
+
+## Built-in meson metadata tests
+
+Three tests in `data/meson.build` always run with `meson test`:
 
 | Test | Tool | What it catches |
 | --- | --- | --- |
@@ -26,18 +44,10 @@ Three tests, all defined in `data/meson.build`:
 | `Validate schema file`  | `glib-compile-schemas --strict --dry-run` | Bad GSettings keys/types/defaults |
 | `Validate appstream file` | `appstreamcli validate --no-net --explain` | Malformed metainfo XML |
 
-These run on every `meson test` and gate the build in CI. They caught
-nothing during Phase 4 (the schema addition validated clean on the
-first try), but they are the only automated regression net for the
-static metadata.
+## Manual recipes (Phase 4 origins)
 
-## Phase 4 verification
-
-The plan's § Verification section has six manual steps. Step 4
-(shortcut rebind) and step 6 (`secret-tool` lookup) can be exercised
-headless; the rest were covered by smoke + targeted sub-process
-checks. Everything below was run from the repo root after
-`ninja -C build`.
+Everything below was originally verified by hand under Xvfb / CLI tools.
+Prefer `meson test` first; use these blocks when debugging a single failure.
 
 ### 1. GSettings schema: keys exist and round-trip
 
@@ -52,7 +62,7 @@ GSETTINGS_SCHEMA_DIR=/tmp/kaki-schemas \
   gsettings list-recursively org.kaki.app
 ```
 
-All 13 Phase 4 keys appeared with the right defaults
+All Phase 4+ keys appear with the right defaults
 (`gpu-backend='auto'`, `shortcut-record='<Control>R'`,
 `api-temperature=0.0`, …).
 
@@ -76,28 +86,7 @@ meson setup --reconfigure build
 ninja -C build
 ```
 
-Vala → C → link. The first compile surfaced four real bugs that the
-type- / link-checker caught and were fixed before any runtime test:
-
-| Error | Cause | Fix |
-| --- | --- | --- |
-| `open_async` doesn't exist on `Gtk.FileLauncher` | GTK4 renamed it | Use `open_containing_folder` |
-| `Gdk.ModifierType.MOD4_MASK` not found | GTK4 renamed Mod4 → Super | `Gdk.ModifierType.SUPER_MASK` |
-| `ShortcutRow.changed` shadows `Gtk.ListBoxRow.changed` | Vala warning, real bug | Renamed to `shortcut_changed` |
-| `UI resource not found: /org/kaki/app/preferences.ui` | File at `src/ui/preferences.ui` but `[GtkTemplate]` expected bare path | Added `alias="preferences.ui"` to `kaki.gresource.xml` |
-
-The remaining warnings are all benign:
-- `Gtk.ShortcutLabel` deprecated since 4.18 — no replacement exists
-  for capturing / displaying an accelerator in a row, so we keep it.
-- Unused-parameter warnings in Vala-generated C callbacks — noise
-  from the Vala→C marshalling.
-- `_finish` defined-but-not-used for async methods — Vala emits the
-  finish function even when only the `begin` form is called.
-
 ### 3. App launches + preferences dialog opens (no criticals)
-
-Headless X server + send `Ctrl+,` via xdotool + watch stderr for
-GTK/Adwaita/GLib criticals:
 
 ```bash
 export GSETTINGS_SCHEMA_DIR=/tmp/kaki-schemas
@@ -113,42 +102,22 @@ xvfb-run -a -s "-screen 0 1280x1024x24" bash -c '
 '
 ```
 
-The first run fired a wall of criticals — the template failed to
-load:
-
-```
-Gtk-CRITICAL: Error building template class 'KakiPreferencesDialog':
-  Invalid property: AdwButtonRow.subtitle
-```
-
-`AdwButtonRow` extends `Adw.PreferencesRow`, not `Adw.ActionRow`, so
-it has no `subtitle` property. Removed every `<property name="subtitle">`
-from `AdwButtonRow` instances in `preferences.ui` (folded the size
-hint into the title text). Re-ran — clean.
+Stderr must not contain `Gtk-CRITICAL` / `Adwaita-CRITICAL` / `GLib-CRITICAL`.
 
 ### 4. Dialog actually renders (pixel sampling)
-
-Screenshots can't be viewed in this environment, so a PIL script
-samples the rendered image to confirm the dialog isn't a blank
-window:
 
 ```python
 from PIL import Image
 img = Image.open('/tmp/kaki-shots/02-preferences.png').convert('RGB')
-print(img.size, len(set(img.get_flattened_data())))  # unique colors
+print(img.size, len(set(img.getdata())))  # unique colors
 for x, y, name in [(50,50,'header'), (640,200,'title'), (640,400,'content')]:
     print(name, img.getpixel((x, y)))
 ```
 
-Main window: ~275 unique colors. Preferences dialog: ~600 unique
-colors with content-area pixels at `(640, 400) = (72, 72, 75)` —
-i.e. a real lit row, not background. The dialog is rendering.
+Expect a non-trivial unique-color count and a content-area pixel that is not
+plain uninitialized black.
 
 ### 5. HuggingFace URLs still resolve
-
-The catalog in `preferences.vala` is hardcoded; the plan warns the
-org may rename repos. Verified all three resolve with a HEAD
-request:
 
 ```bash
 for url in \
@@ -160,60 +129,36 @@ do
 done
 ```
 
-All three returned `200` with a redirect to `us.aws.cdn.hf.co`
-(libsoup follows redirects by default, so this works from the app).
-
 ### 6. libsecret round-trip via `secret-tool`
 
-Per plan § Verification step 6. The libsecret schema in
-`secret-store.vala` uses schema name `org.kaki.app` with attribute
-`type=api-key`. Started a fresh `gnome-keyring-daemon` and exercised
-the full workflow with the CLI:
+Schema name `org.kaki.app`, attribute `type=api-key` (see `secret-store.vala`):
 
 ```bash
 eval $(echo 'password' | gnome-keyring-daemon --start --components=secrets)
-# store
 echo 'password123' | secret-tool store --label='Kaki test' type api-key
-# lookup
 secret-tool lookup type api-key                  # → password123
-# search (lists all matching)
-secret-tool search --all type api-key            # → label, secret, attributes
-# clear
+secret-tool search --all type api-key
 secret-tool clear  type api-key
-# lookup after clear
 secret-tool lookup type api-key                  # → empty
 ```
 
-All four steps behaved correctly. `password_lookupv` returns an
-empty string when nothing matches; `secret-store.vala` normalizes
-that to `null` so callers can treat missing as "not set".
-
 ### 7. Test-sample.wav is a valid silent WAV
-
-The gresource-bundled WAV is what `on_test_connection` POSTs to the
-configured endpoint. Validated its header and content with Python's
-`wave` module:
 
 ```python
 import wave
 wf = wave.open('src/ui/test-sample.wav')
 print(wf.getnchannels(), wf.getframerate(), wf.getnframes(),
       wf.getsampwidth() * 8)
-# → 1 16000 1600 16  (mono, 16 kHz, 1600 frames, 16-bit)
+# → 1 16000 1600 16
 frames = wf.readframes(wf.getnframes())
-print(sum(1 for b in frames if b != 0))   # → 0  (silent)
+print(sum(1 for b in frames if b != 0))   # → 0
 ```
-
-100 ms of 16 kHz mono 16-bit PCM, all zero samples. Matches what
-the OpenAI transcription API expects.
 
 ### 8. Multipart POST construction is correct
 
-This is the one piece of network code that can't be smoke-tested
-without a live endpoint. Instead of mocking libsoup, started a
-local `http.server` and replicated the exact multipart our
-`on_test_connection` builds using the `requests` library with the
-same fields, headers, and bundled WAV:
+Contract test (Python `requests` mirrors Preferences `on_test_connection`).
+The integration suite also drives `RemoteOpenAISource` via
+`kaki-remote-cli` against a mock server for the libsoup path.
 
 ```python
 import http.server, socketserver, threading, requests
@@ -245,20 +190,14 @@ r = requests.post('http://127.0.0.1:18766',
 print(r.status_code, len(r.content))   # → 200 16
 ```
 
-Every form field the server received matched what `on_test_connection`
-sends; the Authorization header came through; the response shape
-matched what our toast formats as `"%u OK — %lld bytes"`.
-
 ### 9. gresource bundle contents
-
-Confirmed all four resources are baked into the binary at the
-expected paths:
 
 ```bash
 strings build/src/kaki | grep -E '^/org/kaki/app/'
 ```
 
-Output:
+Must include:
+
 ```
 /org/kaki/app/preferences.ui
 /org/kaki/app/shortcuts-dialog.ui
@@ -266,35 +205,31 @@ Output:
 /org/kaki/app/window.ui
 ```
 
-The `alias=` attribute on `<file>` in `kaki.gresource.xml` is what
-lets `preferences.ui` live at `src/ui/preferences.ui` on disk but
-appear at `/org/kaki/app/preferences.ui` (no `ui/` segment) in the
-bundle — matching the path in the `[GtkTemplate]` attribute.
-
 ## What is NOT tested
 
-- **Live shortcut rebind (plan step 4)**: requires interactive focus
-  to confirm `<Control><Shift>R` starts recording and `<Control>R`
-  no longer does. The mechanism is verified (GSettings round-trips,
-  `apply_shortcuts` is called on every `changed::shortcut-*`
-  notification, `set_accels_for_action` is the documented live-rebind
-  API) but the end-to-end "press the key, see the recorder start"
-  needs a human at a real session.
-- **Actual model download**: hitting HuggingFace for ~77 MB from a
-  test script is rude; the URL HEAD check + the libsoup send_async +
-  chunked-read path is standard. The atomic `.part` → rename logic
-  is simple enough to verify by reading the code.
-- **Real OpenAI API call**: would need a live key. The multipart
-  construction (step 8 above) is the part that can break silently;
-  the actual HTTP send is plain libsoup.
-- **Preferences dialog visual layout**: pixel sampling confirms
-  content renders, but "does the Models page look right with 5
-  installed models" needs eyes.
+- **Live shortcut rebind**: needs interactive focus to confirm the accelerator
+  starts recording. GSettings round-trip + `apply_shortcuts` are covered;
+  end-to-end keypress → recorder still needs a human session.
+- **Actual HuggingFace GGUF download**: the suite uses a tiny loopback payload
+  and exercises `.part` → rename via `kaki-download-cli`. Full ~77 MB pulls
+  stay manual / opt-in.
+- **Real OpenAI API call**: needs a live key. Multipart contract + mock
+  `{"text":"hello"}` parsing cover the fragile bits.
+- **GStreamer mic / PipeWire capture**, **keystroke injection into a real
+  editor**, **interactive portal GlobalShortcuts bind**.
+- **Preferences visual polish** beyond pixel smoke ("Models page with N
+  installed models looks right").
+- **`subprojects/transcribe.cpp`** (has its own CI).
 
-## Re-running all of this
+## Re-running
 
-Everything above is bash + Python + standard CLI tools. The only
-stateful setup is the throwaway schema dir:
+Prefer:
+
+```bash
+meson test -C build --suite unit --print-errorlogs
+```
+
+For a single manual recipe, the throwaway schema dir is still:
 
 ```bash
 mkdir -p /tmp/kaki-schemas
@@ -302,8 +237,6 @@ cp data/org.kaki.app.gschema.xml /tmp/kaki-schemas/
 glib-compile-schemas /tmp/kaki-schemas
 ```
 
-Then each numbered check above is a standalone block. The xvfb
-checks need `xvfb-run` + `xdotool` + `imagemagick`'s `import`;
-the libsecret check needs `gnome-keyring-daemon` + `secret-tool`;
-the multipart check needs Python `requests`. All are packaged on
-Arch/Debian/Fedora.
+UI checks need `xvfb-run` + `xdotool` + ImageMagick `import`; libsecret needs
+`gnome-keyring-daemon` + `secret-tool`; multipart needs Python `requests`.
+Distro package names: [`tests/README.md`](../tests/README.md).

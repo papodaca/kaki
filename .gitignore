@@ -24,3 +24,6 @@ compile_commands.json
 .*.swp
 .vscode/
 .idea/
+
+# Local pytest venv (see tests/README.md)
+/tests/.venv/

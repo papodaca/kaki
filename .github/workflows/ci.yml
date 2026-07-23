@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            meson ninja-build valac gcc g++ pkg-config cmake \
+            libgtk-4-dev libadwaita-1-dev \
+            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+            libsoup-3.0-dev libsecret-1-dev libjson-glib-dev \
+            desktop-file-utils appstream libglib2.0-dev \
+            python3-pytest python3-pil python3-requests \
+            xvfb xdotool imagemagick gnome-keyring libsecret-tools \
+            dbus-x11
+
+      - name: Configure (CPU)
+        run: meson setup build -Dgpu_backend=cpu
+
+      - name: Build
+        run: ninja -C build
+
+      - name: Unit + integration
+        run: meson test -C build --suite unit --suite integration --print-errorlogs
+
+      - name: UI smoke
+        run: meson test -C build --suite ui --print-errorlogs

@@ -226,6 +226,7 @@ transcribe_dep = declare_dependency(
 subdir('data')
 subdir('src')
 subdir('po')
+subdir('tests')
 
 gnome.post_install(
      glib_compile_schemas: true,
