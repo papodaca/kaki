@@ -24,6 +24,7 @@ local inference engine and supporting OpenAI-compatible remote APIs.
 | 4 | [`phase-4-preferences-ui.md`](phase-4-preferences-ui.md) | Adw.PreferencesDialog with 4 pages (General / Models / Shortcuts / API) |
 | 5 | [`phase-5-global-shortcuts.md`](phase-5-global-shortcuts.md) | xdg-desktop-portal GlobalShortcuts + shell-script fallback |
 | 6 | [`phase-6-remote-openai-backend.md`](phase-6-remote-openai-backend.md) | OpenAI-compatible remote transcription backend |
+| 7 | [`phase-7-testing-framework.md`](phase-7-testing-framework.md) | pytest + meson integration suite (automate `docs/testing.md`) |
 
 ## Architectural decisions
 
@@ -76,6 +77,7 @@ meson setup build -Dgpu_backend=cpu                        # CPU
 5. Phase 4 — preferences UI (General / Models / Shortcuts / API)
 6. Phase 5 — global shortcuts + shell-script fallback
 7. Phase 6 — OpenAI-compatible remote backend
+8. Phase 7 — testing / integration framework (`meson test` + pytest)
 
 ## Open follow-ups
 
@@ -85,3 +87,6 @@ meson setup build -Dgpu_backend=cpu                        # CPU
    the same phase.
 3. Default GGUF download list — Whisper Tiny/Base/Small (English) only,
    or also include multilingual variants and Parakeet.
+4. Phase 7 follow-ups: Vala unit tests for extracted WAV/multipart
+   helpers; live shortcut-rebind / mic / portal E2E remain manual
+   (see [`docs/testing.md`](../testing.md)).
