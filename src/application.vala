@@ -51,17 +51,10 @@ public class Kaki.Application : Adw.Application {
         // application immediately (per plan § Shortcuts page: "no
         // restart required").
         apply_shortcuts ();
-        var s = settings;
-        foreach (string key in new string[] {
-            "shortcut-record", "shortcut-stop", "shortcut-insert",
-            "shortcut-dictate", "shortcut-prefs",
-            "shortcut-shortcuts", "shortcut-quit"
-        }) {
-            s.changed.connect ((changed_key) => {
-                if (changed_key.has_prefix ("shortcut-"))
-                    apply_shortcuts ();
-            });
-        }
+        settings.changed.connect ((changed_key) => {
+            if (changed_key.has_prefix ("shortcut-"))
+                apply_shortcuts ();
+        });
     }
 
     public unowned GLib.Settings settings {
