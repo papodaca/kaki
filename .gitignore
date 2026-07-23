@@ -2,6 +2,9 @@
 /build/
 /build_*/
 
+#worktrees
+.worktrees
+
 # Meson/Ninja artifacts
 *.ninja
 *.ninja.log

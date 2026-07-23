@@ -1,0 +1,932 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the kaki package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: kaki\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-07-23 12:36-0700\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: data/org.kaki.app.desktop.in:2 data/org.kaki.app.metainfo.xml.in:7
+#: src/window.ui:6
+msgid "Kaki"
+msgstr ""
+
+#: data/org.kaki.app.desktop.in:8
+msgid "GTK;"
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:6
+msgid "Path to the GGUF model file used for local transcription"
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:7
+msgid ""
+"Absolute path to a Whisper-compatible GGUF model. When empty, Kaki scans "
+"~/.local/share/kaki/models/ for the first *.gguf at startup."
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:11
+msgid "Use streaming transcription when available"
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:12
+msgid ""
+"When true and the loaded model supports streaming, partial transcripts are "
+"emitted while speaking. When false, the whole clip is transcribed after stop."
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:16
+msgid "Language code or 'auto' for detection"
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:17
+msgid ""
+"ISO-639-1 language code passed to the transcribe runtime, or \"auto\" to let "
+"the model detect the language."
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:21
+msgid "Number of CPU threads for the transcribe.cpp runtime"
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:22
+msgid ""
+"Thread count passed to SessionParams.n_threads. Ignored on GPU backends that "
+"don't use CPU threads."
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:26
+msgid "Auto-type streamed text into focused window during dictation"
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:27
+msgid ""
+"When true, the streamed transcript is injected via the keystroke backend "
+"into whatever window has keyboard focus while Kaki is minimized. When false, "
+"dictation records and transcribes but does not inject keystrokes."
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:31
+msgid "Delay between keystrokes when simulating typing (ms)"
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:32
+msgid ""
+"Passed to ydotool (--key-delay) or xdotool (--delay). Ignored by the libei "
+"backend, which injects events directly."
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:36
+msgid "Append a newline after each dictation session"
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:37
+msgid ""
+"When true, a newline is typed after the final transcript of each dictation "
+"session. Useful when dictating into a chat composer that sends on Enter."
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:41
+msgid "Keystroke injection backend: auto|libei|ydotool|xdotool"
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:42
+msgid ""
+"Forces a specific backend. \"auto\" picks libei (if built with support) then "
+"ydotool then xdotool based on availability and session type."
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:47
+msgid ""
+"Preferred GPU backend (read-only at runtime; reflects the build-time choice)"
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:48
+msgid ""
+"The resolved backend baked into the binary at build time (auto / hip / "
+"vulkan / cpu). Read-only at runtime; the binary was linked against one "
+"backend only."
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:52
+msgid "Enable flash-attention for the local Whisper model"
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:53
+msgid ""
+"When true, transcribe.cpp session.run is invoked with flash attention "
+"enabled. May improve performance on supported models."
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:57
+msgid "Transcription source: local|api"
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:58
+msgid ""
+"\"local\" uses the GGUF model on disk. \"api\" sends audio to an OpenAI-"
+"compatible endpoint (see api-* keys)."
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:62
+msgid "OpenAI-compatible transcription endpoint URL"
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:63
+msgid ""
+"POSTed multipart/form-data with the captured WAV. Defaults to OpenAI; point "
+"at any OpenAI-compatible server."
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:67
+msgid "Model name sent to the transcription API"
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:68
+msgid ""
+"The \"model\" form field passed to the endpoint. Defaults to OpenAI's "
+"whisper-1."
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:72
+msgid "Response format requested from the transcription API"
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:73
+msgid ""
+"One of \"json\", \"text\", or \"verbose_json\". Sent as the "
+"\"response_format\" form field when supported by the endpoint."
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:77
+msgid "Sampling temperature for the transcription API (0.0–1.0)"
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:78
+msgid ""
+"Passed as the \"temperature\" form field. 0.0 is deterministic; 1.0 is "
+"maximum randomness."
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:82
+msgid "Request English translation from the API"
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:83
+msgid ""
+"When true, sends \"translate=true\" so the API returns an English transcript "
+"of whatever language was spoken."
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:87
+msgid "Accelerator for win.record"
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:88 data/org.kaki.app.gschema.xml:93
+msgid ""
+"GTK accelerator string. Applied at startup and re-applied live when changed "
+"in Preferences."
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:92
+msgid "Accelerator for win.stop"
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:97
+msgid "Accelerator for win.insert"
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:98
+msgid ""
+"GTK accelerator string. win.insert copies the transcript to the clipboard "
+"and types it into the previously focused window via the keystroke backend."
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:102
+msgid "Accelerator for win.dictate"
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:103
+msgid "GTK accelerator string. Toggles dictation mode on or off."
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:107
+msgid "Accelerator for app.preferences"
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:108
+msgid "GTK accelerator string. Opens the Preferences dialog."
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:112
+msgid "Accelerator for app.shortcuts"
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:113
+msgid "GTK accelerator string. Opens the Keyboard Shortcuts dialog."
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:117
+msgid "Accelerator for app.quit"
+msgstr ""
+
+#: data/org.kaki.app.gschema.xml:118
+msgid "GTK accelerator string. Quits Kaki."
+msgstr ""
+
+#: data/org.kaki.app.metainfo.xml.in:8
+msgid "Keep the summary shorter, between 10 and 35 characters"
+msgstr ""
+
+#: data/org.kaki.app.metainfo.xml.in:10
+msgid "No description"
+msgstr ""
+
+#: data/org.kaki.app.metainfo.xml.in:52 data/org.kaki.app.metainfo.xml.in:56
+msgid "A caption"
+msgstr ""
+
+#: data/org.kaki.app.metainfo.xml.in:64
+msgid "Release description"
+msgstr ""
+
+#: data/org.kaki.app.metainfo.xml.in:66 data/org.kaki.app.metainfo.xml.in:67
+msgid "List of changes"
+msgstr ""
+
+#: src/application.vala:173
+msgid "Toggle voice dictation"
+msgstr ""
+
+#: src/application.vala:239
+msgid "translator-credits"
+msgstr ""
+
+#: src/services/local-source.vala:87
+msgid ""
+"No model configured. Set a model in Preferences or place a .gguf in ~/.local/"
+"share/kaki/models/."
+msgstr ""
+
+#: src/services/model-downloader.vala:38
+#, c-format
+msgid "bad URL: %s"
+msgstr ""
+
+#: src/services/model-downloader.vala:57
+#, c-format
+msgid "open dest: %s"
+msgstr ""
+
+#: src/services/model-downloader.vala:67 src/services/model-downloader.vala:109
+msgid "cancelled"
+msgstr ""
+
+#: src/services/model-downloader.vala:69
+#, c-format
+msgid "send: %s"
+msgstr ""
+
+#: src/services/model-downloader.vala:88
+msgid "read returned negative"
+msgstr ""
+
+#: src/services/recorder.vala:62
+msgid ""
+"Neither pulsesrc nor pipewiresrc available; install pipewire-pulse or "
+"pulseaudio"
+msgstr ""
+
+#: src/services/recorder.vala:77
+msgid "appsink element unavailable"
+msgstr ""
+
+#: src/services/recorder.vala:89
+msgid "Failed to link recorder pipeline"
+msgstr ""
+
+#: src/services/recorder.vala:98
+msgid "Failed to start recording pipeline"
+msgstr ""
+
+#: src/services/remote-openai-source.vala:74
+msgid "No API endpoint configured. Set one in Preferences → API."
+msgstr ""
+
+#: src/services/remote-openai-source.vala:77
+msgid "No API model configured. Set one in Preferences → API."
+msgstr ""
+
+#: src/services/remote-openai-source.vala:119 src/ui/preferences.vala:683
+#, c-format
+msgid "%u %s: %s"
+msgstr ""
+
+#: src/services/remote-openai-source.vala:146
+#: src/services/remote-openai-source.vala:151
+#: src/services/remote-openai-source.vala:156
+msgid "Remote OpenAI-compatible source does not support streaming"
+msgstr ""
+
+#. default collection
+#: src/services/secret-store.vala:60
+msgid "Kaki API key"
+msgstr ""
+
+#: src/shortcuts-dialog.ui:6 src/ui/preferences.ui:191
+msgid "Shortcuts"
+msgstr ""
+
+#: src/shortcuts-dialog.ui:9
+msgctxt "shortcut window"
+msgid "Show Shortcuts"
+msgstr ""
+
+#: src/shortcuts-dialog.ui:15
+msgctxt "shortcut window"
+msgid "Quit"
+msgstr ""
+
+#: src/ui/preferences.ui:6
+msgid "Preferences"
+msgstr ""
+
+#: src/ui/preferences.ui:15
+msgid "General"
+msgstr ""
+
+#: src/ui/preferences.ui:20
+msgid "Engine"
+msgstr ""
+
+#: src/ui/preferences.ui:23
+msgid "Backend"
+msgstr ""
+
+#: src/ui/preferences.ui:24
+msgid "Read-only — baked in at build time"
+msgstr ""
+
+#: src/ui/preferences.ui:28
+msgid "Auto"
+msgstr ""
+
+#: src/ui/preferences.ui:29
+msgid "HIP (ROCm)"
+msgstr ""
+
+#: src/ui/preferences.ui:30
+msgid "Vulkan"
+msgstr ""
+
+#: src/ui/preferences.ui:31
+msgid "CPU"
+msgstr ""
+
+#: src/ui/preferences.ui:42
+msgid "Default model"
+msgstr ""
+
+#: src/ui/preferences.ui:43
+msgid "GGUF loaded at startup"
+msgstr ""
+
+#: src/ui/preferences.ui:54
+msgid "Transcription"
+msgstr ""
+
+#: src/ui/preferences.ui:57
+msgid "Language"
+msgstr ""
+
+#: src/ui/preferences.ui:58
+msgid "Language code or auto-detect"
+msgstr ""
+
+#: src/ui/preferences.ui:62
+msgid "Auto-detect"
+msgstr ""
+
+#: src/ui/preferences.ui:89
+msgid "CPU threads"
+msgstr ""
+
+#: src/ui/preferences.ui:90
+msgid "Thread count for the transcribe runtime"
+msgstr ""
+
+#: src/ui/preferences.ui:106
+msgid "Flash attention"
+msgstr ""
+
+#: src/ui/preferences.ui:107
+msgid "May improve performance on supported models"
+msgstr ""
+
+#: src/ui/preferences.ui:112
+msgid "Streaming"
+msgstr ""
+
+#: src/ui/preferences.ui:113
+msgid "Emit partial transcripts while speaking"
+msgstr ""
+
+#: src/ui/preferences.ui:127
+msgid "Models"
+msgstr ""
+
+#: src/ui/preferences.ui:132
+msgid "Installed models"
+msgstr ""
+
+#: src/ui/preferences.ui:133
+msgid "Files in ~/.local/share/kaki/models/"
+msgstr ""
+
+#: src/ui/preferences.ui:139
+msgid "Active download"
+msgstr ""
+
+#: src/ui/preferences.ui:146
+msgid "Download"
+msgstr ""
+
+#: src/ui/preferences.ui:149
+msgid "Whisper Tiny (English, Q8_0) — ~77 MB"
+msgstr ""
+
+#: src/ui/preferences.ui:156
+msgid "Whisper Base (English, Q8_0) — ~142 MB"
+msgstr ""
+
+#: src/ui/preferences.ui:163
+msgid "Whisper Small (English, Q8_0) — ~466 MB"
+msgstr ""
+
+#: src/ui/preferences.ui:175
+msgid "Open Models Directory"
+msgstr ""
+
+#: src/ui/preferences.ui:195
+msgid "Global shortcut"
+msgstr ""
+
+#: src/ui/preferences.ui:196
+msgid "Toggle recording from anywhere on the desktop"
+msgstr ""
+
+#: src/ui/preferences.ui:199
+msgid "Toggle recording"
+msgstr ""
+
+#: src/ui/preferences.ui:200
+msgid "Checking portal availability…"
+msgstr ""
+
+#: src/ui/preferences.ui:207
+msgid "Keyboard shortcuts"
+msgstr ""
+
+#: src/ui/preferences.ui:208
+msgid "Click \"Set…\" to capture a new key combination"
+msgstr ""
+
+#: src/ui/preferences.ui:220
+msgid "API"
+msgstr ""
+
+#: src/ui/preferences.ui:224
+msgid "OpenAI-compatible transcription"
+msgstr ""
+
+#: src/ui/preferences.ui:227
+msgid "Transcription source"
+msgstr ""
+
+#: src/ui/preferences.ui:231
+msgid "Local model"
+msgstr ""
+
+#: src/ui/preferences.ui:232
+msgid "OpenAI-compatible API"
+msgstr ""
+
+#: src/ui/preferences.ui:246
+msgid "Endpoint"
+msgstr ""
+
+#: src/ui/preferences.ui:249
+msgid "Endpoint URL"
+msgstr ""
+
+#: src/ui/preferences.ui:256
+msgid "Model name"
+msgstr ""
+
+#: src/ui/preferences.ui:262
+msgid "API key"
+msgstr ""
+
+#: src/ui/preferences.ui:269
+msgid "Test connection — POSTs a 100 ms silent sample to the endpoint"
+msgstr ""
+
+#: src/ui/preferences.ui:279
+msgid "Request"
+msgstr ""
+
+#: src/ui/preferences.ui:282
+msgid "Response format"
+msgstr ""
+
+#: src/ui/preferences.ui:286
+msgid "JSON"
+msgstr ""
+
+#: src/ui/preferences.ui:287
+msgid "Text"
+msgstr ""
+
+#: src/ui/preferences.ui:288
+msgid "Verbose JSON"
+msgstr ""
+
+#: src/ui/preferences.ui:299
+msgid "Temperature"
+msgstr ""
+
+#: src/ui/preferences.ui:300
+msgid "0.0 deterministic — 1.0 random"
+msgstr ""
+
+#: src/ui/preferences.ui:316
+msgid "Translate to English"
+msgstr ""
+
+#: src/ui/preferences.ui:317
+msgid "Ask the API to return an English transcript"
+msgstr ""
+
+#: src/ui/preferences.vala:132
+msgid "HIP (ROCm) backend compiled in"
+msgstr ""
+
+#: src/ui/preferences.vala:133
+msgid "Vulkan backend compiled in"
+msgstr ""
+
+#: src/ui/preferences.vala:134
+msgid "CPU backend compiled in"
+msgstr ""
+
+#: src/ui/preferences.vala:135
+msgid "Auto — backend selected at runtime"
+msgstr ""
+
+#: src/ui/preferences.vala:185
+msgid "(none)"
+msgstr ""
+
+#. Size unavailable — leave subtitle empty.
+#. Select button on the right to set as default.
+#: src/ui/preferences.vala:259
+msgid "Set as default"
+msgstr ""
+
+#: src/ui/preferences.vala:264
+#, c-format
+msgid "Set default model to %s"
+msgstr ""
+
+#: src/ui/preferences.vala:276
+msgid "No models installed"
+msgstr ""
+
+#: src/ui/preferences.vala:277
+msgid "Use Download below to fetch one"
+msgstr ""
+
+#: src/ui/preferences.vala:295
+msgid "A download is already running"
+msgstr ""
+
+#: src/ui/preferences.vala:307
+#, c-format
+msgid "Failed to create models dir: errno %d"
+msgstr ""
+
+#: src/ui/preferences.vala:316
+msgid "Starting download…"
+msgstr ""
+
+#: src/ui/preferences.vala:337
+#, c-format
+msgid "%s / %s"
+msgstr ""
+
+#: src/ui/preferences.vala:339
+#, c-format
+msgid "%s downloaded"
+msgstr ""
+
+#: src/ui/preferences.vala:345
+#, c-format
+msgid "Downloaded %s"
+msgstr ""
+
+#: src/ui/preferences.vala:351
+#, c-format
+msgid "Download failed: %s"
+msgstr ""
+
+#: src/ui/preferences.vala:378
+#, c-format
+msgid "Cannot create models directory: errno %d"
+msgstr ""
+
+#: src/ui/preferences.vala:392
+#, c-format
+msgid "Cannot open models directory: %s"
+msgstr ""
+
+#. (label, action, setting key, default) — order matches the plan.
+#: src/ui/preferences.vala:406
+msgid "Record / Pause"
+msgstr ""
+
+#: src/ui/preferences.vala:407
+msgid "Stop"
+msgstr ""
+
+#: src/ui/preferences.vala:408
+msgid "Insert text"
+msgstr ""
+
+#: src/ui/preferences.vala:409
+msgid "Toggle dictation"
+msgstr ""
+
+#: src/ui/preferences.vala:410
+msgid "Show preferences"
+msgstr ""
+
+#: src/ui/preferences.vala:411
+msgid "Show shortcuts"
+msgstr ""
+
+#: src/ui/preferences.vala:412
+msgid "Quit"
+msgstr ""
+
+#: src/ui/preferences.vala:430
+msgid "Bind via portal"
+msgstr ""
+
+#: src/ui/preferences.vala:436
+msgid "Install helper script"
+msgstr ""
+
+#: src/ui/preferences.vala:444
+msgid "Active via xdg-desktop-portal"
+msgstr ""
+
+#: src/ui/preferences.vala:448
+msgid "Portal unavailable — install kaki-signal as a custom shortcut"
+msgstr ""
+
+#: src/ui/preferences.vala:455
+msgid "Assign a shortcut in the portal dialog…"
+msgstr ""
+
+#: src/ui/preferences.vala:461
+msgid "Global shortcut bound"
+msgstr ""
+
+#: src/ui/preferences.vala:463
+msgid "Portal binding failed — use the helper script"
+msgstr ""
+
+#: src/ui/preferences.vala:480
+#, c-format
+msgid "Missing bundled kaki-signal.sh: %s"
+msgstr ""
+
+#: src/ui/preferences.vala:490
+#, c-format
+msgid "Cannot create %s: errno %d"
+msgstr ""
+
+#: src/ui/preferences.vala:502
+#, c-format
+msgid "Cannot write %s: %s"
+msgstr ""
+
+#: src/ui/preferences.vala:511
+#, c-format
+msgid "Installed %s but could not make it executable"
+msgstr ""
+
+#: src/ui/preferences.vala:517
+#, c-format
+msgid "Installed to %s. Already on PATH."
+msgstr ""
+
+#: src/ui/preferences.vala:520
+#, c-format
+msgid "Installed to %s. Log out/in if it isn't on PATH yet."
+msgstr ""
+
+#. Pop up a small dialog with the GNOME custom-shortcut steps and a
+#. "Copy command" button that copies `kaki-signal toggle` to the
+#. clipboard so the user can paste it straight into GNOME Settings.
+#: src/ui/preferences.vala:530
+msgid "Bind kaki-signal in GNOME"
+msgstr ""
+
+#: src/ui/preferences.vala:532
+msgid ""
+"Open Settings → Keyboard → View and Customize Shortcuts → Custom Shortcuts"
+msgstr ""
+
+#: src/ui/preferences.vala:533
+msgid "Name: Kaki Toggle Recording"
+msgstr ""
+
+#: src/ui/preferences.vala:534
+msgid "Command: kaki-signal toggle"
+msgstr ""
+
+#: src/ui/preferences.vala:535
+msgid "Shortcut: (press your combo)"
+msgstr ""
+
+#: src/ui/preferences.vala:537
+msgid "Copy command"
+msgstr ""
+
+#: src/ui/preferences.vala:538
+msgid "Close"
+msgstr ""
+
+#: src/ui/preferences.vala:545
+msgid "Copied “kaki-signal toggle”"
+msgstr ""
+
+#: src/ui/preferences.vala:616
+msgid "API key saved"
+msgstr ""
+
+#: src/ui/preferences.vala:617
+msgid "API key cleared"
+msgstr ""
+
+#: src/ui/preferences.vala:620
+#, c-format
+msgid "Cannot save API key: %s"
+msgstr ""
+
+#: src/ui/preferences.vala:626
+msgid "Testing connection…"
+msgstr ""
+
+#: src/ui/preferences.vala:638
+#, c-format
+msgid "Missing test-sample.wav resource: %s"
+msgstr ""
+
+#: src/ui/preferences.vala:663
+#, c-format
+msgid "Cannot read API key from keyring: %s"
+msgstr ""
+
+#: src/ui/preferences.vala:676
+#, c-format
+msgid "%u OK — %s"
+msgstr ""
+
+#: src/ui/preferences.vala:687
+#, c-format
+msgid "Test connection failed: %s"
+msgstr ""
+
+#: src/ui/preferences.vala:759 src/ui/preferences.vala:799
+msgid "Set…"
+msgstr ""
+
+#: src/ui/preferences.vala:790
+msgid "Press keys…"
+msgstr ""
+
+#: src/window.ui:18
+msgid "Dictate"
+msgstr ""
+
+#: src/window.ui:19
+msgid "Toggle dictation mode (Ctrl+D)"
+msgstr ""
+
+#: src/window.ui:27
+msgid "Main Menu"
+msgstr ""
+
+#: src/window.ui:41
+msgid "No Model Loaded"
+msgstr ""
+
+#: src/window.ui:42
+msgid ""
+"Open Preferences to download a model or configure an OpenAI-compatible API."
+msgstr ""
+
+#: src/window.ui:53
+msgid "Loading model…"
+msgstr ""
+
+#: src/window.ui:73
+msgid "Record"
+msgstr ""
+
+#: src/window.ui:74
+msgid "Start recording (Ctrl+R)"
+msgstr ""
+
+#: src/window.ui:81
+msgid "Stop recording (Ctrl+S)"
+msgstr ""
+
+#: src/window.ui:88
+msgid "Test Keystroke"
+msgstr ""
+
+#: src/window.ui:89
+msgid ""
+"Type the current buffer into the previously focused window (tests the "
+"keystroke backend)"
+msgstr ""
+
+#: src/window.ui:96
+msgid "Copy transcript to clipboard (Ctrl+Shift+C)"
+msgstr ""
+
+#: src/window.ui:103
+msgid "Clear transcript (Ctrl+Delete)"
+msgstr ""
+
+#: src/window.ui:138
+msgid "_Preferences"
+msgstr ""
+
+#: src/window.ui:142
+msgid "_Keyboard Shortcuts"
+msgstr ""
+
+#: src/window.ui:146
+msgid "_About Kaki"
+msgstr ""
+
+#: src/window.vala:216
+#, c-format
+msgid "Prepare failed: %s"
+msgstr ""
+
+#: src/window.vala:271
+msgid "Stop dictation before inserting text"
+msgstr ""
+
+#: src/window.vala:396 src/window.vala:471 src/window.vala:494
+msgid "No keystroke backend available"
+msgstr ""
+
+#: src/window.vala:435
+#, c-format
+msgid "Recorder start failed: %s"
+msgstr ""
+
+#: src/window.vala:477
+msgid "Buffer is empty — type something to test with first"
+msgstr ""
+
+#: src/window.vala:500
+msgid "Buffer is empty — type something to insert first"
+msgstr ""
+
+#: src/window.vala:577
+#, c-format
+msgid "Recorder error: %s"
+msgstr ""
+
+#: src/window.vala:585
+#, c-format
+msgid "Source error: %s"
+msgstr ""

@@ -1,8 +1,16 @@
 # List of source files containing translatable strings.
 # Please keep this file sorted alphabetically.
 data/org.kaki.app.desktop.in
-data/org.kaki.app.metainfo.xml.in
 data/org.kaki.app.gschema.xml
-src/main.vala
-src/window.vala
+data/org.kaki.app.metainfo.xml.in
+src/application.vala
+src/services/local-source.vala
+src/services/model-downloader.vala
+src/services/recorder.vala
+src/services/remote-openai-source.vala
+src/services/secret-store.vala
+src/shortcuts-dialog.ui
+src/ui/preferences.ui
+src/ui/preferences.vala
 src/window.ui
+src/window.vala

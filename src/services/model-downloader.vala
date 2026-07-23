@@ -35,7 +35,7 @@ public class Kaki.ModelDownloader : GLib.Object {
         try {
             uri = GLib.Uri.parse (url, GLib.UriFlags.NONE);
         } catch (GLib.UriError e) {
-            failed (@"bad URL: $(e.message)");
+            failed (_("bad URL: %s").printf (e.message));
             return;
         }
 
@@ -54,7 +54,7 @@ public class Kaki.ModelDownloader : GLib.Object {
             out = part_file.replace (null, false,
                                      FileCreateFlags.REPLACE_DESTINATION);
         } catch (GLib.Error e) {
-            failed (@"open dest: $(e.message)");
+            failed (_("open dest: %s").printf (e.message));
             return;
         }
 
@@ -64,9 +64,9 @@ public class Kaki.ModelDownloader : GLib.Object {
         } catch (GLib.Error e) {
             cleanup_part (part_file);
             if (cancellable != null && cancellable.is_cancelled ())
-                failed ("cancelled");
+                failed (_("cancelled"));
             else
-                failed (@"send: $(e.message)");
+                failed (_("send: %s").printf (e.message));
             return;
         }
 
@@ -85,7 +85,7 @@ public class Kaki.ModelDownloader : GLib.Object {
                 if (n == 0)
                     break;
                 if (n < 0) {
-                    failed ("read returned negative");
+                    failed (_("read returned negative"));
                     cleanup_part (part_file);
                     return;
                 }
@@ -106,7 +106,7 @@ public class Kaki.ModelDownloader : GLib.Object {
             }
             cleanup_part (part_file);
             if (cancellable != null && cancellable.is_cancelled ())
-                failed ("cancelled");
+                failed (_("cancelled"));
             else
                 failed (e.message);
         }
