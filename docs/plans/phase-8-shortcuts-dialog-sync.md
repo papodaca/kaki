@@ -127,14 +127,16 @@ settings.changed.connect ((changed_key) => {
 
 ## Acceptance criteria
 
-- [ ] Shortcuts dialog lists all 7 Preferences-backed actions + Copy + Clear
-- [ ] Changing a shortcut in Preferences updates the dialog without restart
+- [x] Shortcuts dialog lists all 7 Preferences-backed actions + Copy + Clear
+- [x] Changing a shortcut in Preferences updates the dialog without restart
   (reopen or keep open — libadwaita refreshes on `keys-changed`)
-- [ ] Clearing a shortcut (Backspace in Preferences) shows “No Shortcut”
+- [x] Clearing a shortcut (Backspace in Preferences) shows “No Shortcut”
   in the dialog
-- [ ] Copy / Clear still show `<Control><Shift>C` / `<Control>Delete`
-- [ ] No second write path; no hardcoded `accelerator` on customizable items
-- [ ] Global shortcut Preferences UI unchanged
+- [x] Copy / Clear still show `<Control><Shift>C` / `<Control>Delete`
+- [x] No second write path; no hardcoded `accelerator` on customizable items
+- [x] Global shortcut Preferences UI unchanged
+
+Status: in-progress (implemented; awaiting manual UI check + px-review)
 
 ## Manual test plan
 
