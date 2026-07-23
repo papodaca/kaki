@@ -59,7 +59,7 @@ public class Kaki.Recorder : GLib.Object {
         }
         if (src == null) {
             throw new IOError.NOT_FOUND (
-                "Neither pulsesrc nor pipewiresrc available; install pipewire-pulse or pulseaudio");
+                _("Neither pulsesrc nor pipewiresrc available; install pipewire-pulse or pulseaudio"));
         }
         // 100 ms block hints (microseconds). PA/PW may still deliver
         // smaller buffers; the appsink emits per-buffer regardless.
@@ -74,7 +74,7 @@ public class Kaki.Recorder : GLib.Object {
 
         var sink = ElementFactory.make ("appsink", "sink");
         if (sink == null) {
-            throw new IOError.NOT_FOUND ("appsink element unavailable");
+            throw new IOError.NOT_FOUND (_("appsink element unavailable"));
         }
         sink.set_property ("emit-signals", true);
         sink.set_property ("sync", false);
@@ -86,7 +86,7 @@ public class Kaki.Recorder : GLib.Object {
         pipeline.add_many (src, convert, resample, caps, sink);
         if (!src.link_many (convert, resample, caps, sink)) {
             pipeline.set_state (State.NULL);
-            throw new IOError.FAILED ("Failed to link recorder pipeline");
+            throw new IOError.FAILED (_("Failed to link recorder pipeline"));
         }
 
         var bus = pipeline.get_bus ();
@@ -95,7 +95,7 @@ public class Kaki.Recorder : GLib.Object {
         var ret = pipeline.set_state (State.PLAYING);
         if (ret == StateChangeReturn.FAILURE) {
             pipeline.set_state (State.NULL);
-            throw new IOError.FAILED ("Failed to start recording pipeline");
+            throw new IOError.FAILED (_("Failed to start recording pipeline"));
         }
 
         is_recording = true;

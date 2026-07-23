@@ -57,7 +57,7 @@ public class Kaki.SecretStore : GLib.Object {
         yield Secret.password_storev (_schema,
                                        (owned) attrs,
                                        null, // default collection
-                                       "Kaki API key",
+                                       _("Kaki API key"),
                                        key,
                                        cancellable);
     }

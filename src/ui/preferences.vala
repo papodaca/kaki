@@ -261,7 +261,7 @@ public class Kaki.PreferencesDialog : Adw.PreferencesDialog {
                     settings.set_string ("model-path", path);
                     refresh_default_model_row ();
                     add_toast (new Adw.Toast (
-                        _(@"Set default model to $name")));
+                        _("Set default model to %s").printf (name)));
                 });
                 row.add_suffix (select_btn);
 
@@ -304,7 +304,7 @@ public class Kaki.PreferencesDialog : Adw.PreferencesDialog {
         int rc = GLib.DirUtils.create_with_parents (models_dir, 0700);
         if (rc != 0) {
             add_toast (new Adw.Toast (
-                _(@"Failed to create models dir: errno %d").printf (rc)));
+                _("Failed to create models dir: errno %d").printf (rc)));
             return;
         }
 
@@ -332,22 +332,23 @@ public class Kaki.PreferencesDialog : Adw.PreferencesDialog {
     private void on_download_progress (int64 downloaded, int64 total) {
         if (active_progress_row == null)
             return;
-        string dl = format_size (downloaded);
+        string dl = GLib.format_size (downloaded);
         if (total > 0)
-            active_progress_row.subtitle = _(@"$dl / $(format_size (total))");
+            active_progress_row.subtitle = _("%s / %s").printf (dl, GLib.format_size (total));
         else
-            active_progress_row.subtitle = _(@"$dl downloaded");
+            active_progress_row.subtitle = _("%s downloaded").printf (dl);
     }
 
     private void on_download_completed (string local_path) {
         cleanup_download_ui ();
-        add_toast (new Adw.Toast (_(@"Downloaded $(GLib.Path.get_basename (local_path))")));
+        add_toast (new Adw.Toast (
+            _("Downloaded %s").printf (GLib.Path.get_basename (local_path))));
         refresh_installed_models ();
     }
 
     private void on_download_failed (string message) {
         cleanup_download_ui ();
-        add_toast (new Adw.Toast (_(@"Download failed: $message")));
+        add_toast (new Adw.Toast (_("Download failed: %s").printf (message)));
         refresh_installed_models ();
     }
 
@@ -374,7 +375,7 @@ public class Kaki.PreferencesDialog : Adw.PreferencesDialog {
         int rc = GLib.DirUtils.create_with_parents (dir_path, 0700);
         if (rc != 0) {
             add_toast (new Adw.Toast (
-                _(@"Cannot create models directory: errno %d").printf (rc)));
+                _("Cannot create models directory: errno %d").printf (rc)));
             return;
         }
 
@@ -388,7 +389,7 @@ public class Kaki.PreferencesDialog : Adw.PreferencesDialog {
             yield launcher.open_containing_folder (parent_window, null);
         } catch (GLib.Error e) {
             add_toast (new Adw.Toast (
-                _(@"Cannot open models directory: $(e.message)")));
+                _("Cannot open models directory: %s").printf (e.message)));
         }
     }
 
@@ -476,7 +477,7 @@ public class Kaki.PreferencesDialog : Adw.PreferencesDialog {
                 "/org/kaki/app/kaki-signal.sh", 0);
         } catch (GLib.Error e) {
             add_toast (new Adw.Toast (
-                _(@"Missing bundled kaki-signal.sh: $(e.message)")));
+                _("Missing bundled kaki-signal.sh: %s").printf (e.message)));
             return;
         }
 
@@ -486,7 +487,7 @@ public class Kaki.PreferencesDialog : Adw.PreferencesDialog {
         int rc = GLib.DirUtils.create_with_parents (local_bin, 0755);
         if (rc != 0) {
             add_toast (new Adw.Toast (
-                _(@"Cannot create $local_bin: errno %d").printf (rc)));
+                _("Cannot create %s: errno %d").printf (local_bin, rc)));
             return;
         }
         string dest = GLib.Path.build_filename (local_bin, "kaki-signal");
@@ -498,7 +499,7 @@ public class Kaki.PreferencesDialog : Adw.PreferencesDialog {
                 (ssize_t) script.get_size ());
         } catch (GLib.Error e) {
             add_toast (new Adw.Toast (
-                _(@"Cannot write $dest: $(e.message)")));
+                _("Cannot write %s: %s").printf (dest, e.message)));
             return;
         }
         // chmod 0755 — set_contents' default mode isn't executable, so
@@ -507,15 +508,17 @@ public class Kaki.PreferencesDialog : Adw.PreferencesDialog {
         // script and a dialog that claimed success.
         if (Posix.chmod (dest, 0755) != 0) {
             add_toast (new Adw.Toast (
-                _(@"Installed $dest but could not make it executable")));
+                _("Installed %s but could not make it executable").printf (dest)));
             return;
         }
 
         string installed_note;
         if (command_on_path ("kaki-signal"))
-            installed_note = _(@"Installed to $(GLib.Path.get_basename (dest)). Already on PATH.");
+            installed_note = _("Installed to %s. Already on PATH.")
+                .printf (GLib.Path.get_basename (dest));
         else
-            installed_note = _(@"Installed to $dest. Log out/in if it isn't on PATH yet.");
+            installed_note = _("Installed to %s. Log out/in if it isn't on PATH yet.")
+                .printf (dest);
 
         show_gnome_shortcut_instructions (installed_note);
     }
@@ -614,7 +617,7 @@ public class Kaki.PreferencesDialog : Adw.PreferencesDialog {
                 : _("API key cleared")));
         } catch (GLib.Error e) {
             add_toast (new Adw.Toast (
-                _(@"Cannot save API key: $(e.message)")));
+                _("Cannot save API key: %s").printf (e.message)));
         }
     }
 
@@ -632,7 +635,7 @@ public class Kaki.PreferencesDialog : Adw.PreferencesDialog {
                 "/org/kaki/app/test-sample.wav", 0);
         } catch (GLib.Error e) {
             add_toast (new Adw.Toast (
-                _(@"Missing test-sample.wav resource: $(e.message)")));
+                _("Missing test-sample.wav resource: %s").printf (e.message)));
             return;
         }
 
@@ -657,7 +660,7 @@ public class Kaki.PreferencesDialog : Adw.PreferencesDialog {
             key = yield secret.get_api_key ();
         } catch (GLib.Error e) {
             add_toast (new Adw.Toast (
-                _(@"Cannot read API key from keyring: $(e.message)")));
+                _("Cannot read API key from keyring: %s").printf (e.message)));
             return;
         }
         if (key != null && key.length > 0)
@@ -670,17 +673,18 @@ public class Kaki.PreferencesDialog : Adw.PreferencesDialog {
             string reason = msg.get_reason_phrase () ?? "";
             if (status >= 200 && status < 300) {
                 add_toast (new Adw.Toast (
-                    _(@"$status OK — %lld bytes").printf (body.get_size ())));
+                    _("%u OK — %s").printf (status,
+                        GLib.format_size (body.get_size ()))));
             } else {
                 string body_text = (string) body.get_data ();
                 string preview = body_text.length > 200
                     ? body_text.substring (0, 200) : body_text;
                 add_toast (new Adw.Toast (
-                    _(@"$status $reason: $preview")));
+                    _("%u %s: %s").printf (status, reason, preview)));
             }
         } catch (GLib.Error e) {
             add_toast (new Adw.Toast (
-                _(@"Test connection failed: $(e.message)")));
+                _("Test connection failed: %s").printf (e.message)));
         }
     }
 
@@ -693,16 +697,6 @@ public class Kaki.PreferencesDialog : Adw.PreferencesDialog {
             if (arr[i] == value)
                 return i;
         return -1;
-    }
-
-    private static string format_size (int64 bytes) {
-        if (bytes < 1024)
-            return _(@"$bytes B");
-        if (bytes < 1024 * 1024)
-            return _(@"%.1f KB").printf ((double) bytes / 1024);
-        if (bytes < 1024L * 1024 * 1024)
-            return _(@"%.1f MB").printf ((double) bytes / (1024 * 1024));
-        return _(@"%.2f GB").printf ((double) bytes / (1024L * 1024 * 1024));
     }
 }
 

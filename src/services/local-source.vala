@@ -84,7 +84,7 @@ public class Kaki.LocalSource : GLib.Object, TranscriptionSource {
         string path = resolve_model_path ();
         if (path == null || path == "") {
             throw new IOError.NOT_FOUND (
-                "No model configured. Set a model in Preferences or place a .gguf in ~/.local/share/kaki/models/.");
+                _("No model configured. Set a model in Preferences or place a .gguf in ~/.local/share/kaki/models/."));
         }
 
         SourceFunc callback = prepare.callback;

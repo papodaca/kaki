@@ -1,1 +1,3 @@
 # Please keep this file sorted alphabetically.
+# Contributors: append a locale code (e.g. fr, de, pt_BR) on its own line
+# when adding a translation, then run `ninja -C build kaki-update-po`.

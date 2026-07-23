@@ -71,10 +71,10 @@ public class Kaki.RemoteOpenAISource : GLib.Object, TranscriptionSource {
         // and forcing a key would block those setups at startup.
         if (endpoint == null || endpoint == "")
             throw new IOError.FAILED (
-                "No API endpoint configured. Set one in Preferences → API.");
+                _("No API endpoint configured. Set one in Preferences → API."));
         if (model == null || model == "")
             throw new IOError.FAILED (
-                "No API model configured. Set one in Preferences → API.");
+                _("No API model configured. Set one in Preferences → API."));
     }
 
     /* ----------------------------------------------------------------- */
@@ -115,7 +115,8 @@ public class Kaki.RemoteOpenAISource : GLib.Object, TranscriptionSource {
             string body_text = (string) body.get_data ();
             string preview = body_text.length > 200
                 ? body_text.substring (0, 200) : body_text;
-            throw new IOError.FAILED (@"$status $reason: $preview");
+            throw new IOError.FAILED (
+                _("%u %s: %s").printf (status, reason, preview));
         }
 
         // 4. Parse per response_format. OpenAI returns {"text": "..."}
@@ -142,17 +143,17 @@ public class Kaki.RemoteOpenAISource : GLib.Object, TranscriptionSource {
 
     public async void stream_begin (Cancellable? cancellable = null) throws GLib.Error {
         throw new IOError.NOT_SUPPORTED (
-            "Remote OpenAI-compatible source does not support streaming");
+            _("Remote OpenAI-compatible source does not support streaming"));
     }
 
     public async void stream_feed (float[] chunk, Cancellable? cancellable = null) throws GLib.Error {
         throw new IOError.NOT_SUPPORTED (
-            "Remote OpenAI-compatible source does not support streaming");
+            _("Remote OpenAI-compatible source does not support streaming"));
     }
 
     public async void stream_finalize (Cancellable? cancellable = null) throws GLib.Error {
         throw new IOError.NOT_SUPPORTED (
-            "Remote OpenAI-compatible source does not support streaming");
+            _("Remote OpenAI-compatible source does not support streaming"));
     }
 
     /* ----------------------------------------------------------------- */
